@@ -1,0 +1,101 @@
+apgar,birth_week,birth_weight,maternal_age,delivery_comp,inherited
+10,37,2396,30,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+7,37,3292,32,1,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+8,35,3329,21,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+10,36,3590,26,1,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+6,37,2581,25,1,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+8,40,2539,24,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+8,38,3460,36,0,[]
+10,34,3348,30,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+5,38,3325,21,0,[]
+6,37,3373,32,0,[]
+10,36,2859,38,1,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+6,39,3316,33,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+6,40,3346,20,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+8,39,2842,25,1,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+7,36,4132,34,0,[]
+6,37,3436,24,0,[]
+9,38,2604,30,1,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+8,39,3528,31,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+5,37,2712,23,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+7,37,3593,27,2,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+9,35,3779,18,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+9,35,2789,22,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+5,39,3681,26,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+7,40,3406,21,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+8,37,3611,36,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+4,40,4148,20,0,[]
+7,38,3077,25,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+5,36,2823,28,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+9,38,2755,35,1,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+8,41,2792,20,0,[]
+7,37,3161,33,2,[]
+4,41,3370,28,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+4,32,3338,23,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+6,39,3613,30,1,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+6,38,3206,28,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+10,37,3926,24,2,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+5,38,3067,28,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+7,34,4500,26,2,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+7,37,3512,28,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+10,38,2771,31,1,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+9,40,2664,35,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+9,36,3441,21,2,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+10,36,3088,38,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+9,36,3557,18,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+6,39,3436,27,2,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+7,38,3163,30,0,[]
+10,36,2776,29,0,[]
+7,39,2442,24,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+4,38,2976,26,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+6,39,3628,25,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+8,36,3307,25,0,[]
+6,37,2577,32,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+10,37,3286,29,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+8,35,3392,24,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+4,38,2758,32,2,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+10,38,3276,29,1,[]
+5,38,3229,32,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+7,37,2628,31,0,[]
+4,35,3378,23,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+7,37,3480,25,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+9,37,3741,31,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+5,36,3726,31,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+5,37,2511,27,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+4,38,2731,28,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+5,41,3457,34,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+8,38,3456,25,2,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+5,38,3457,30,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+7,37,4500,26,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+7,34,3485,26,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+10,37,3767,33,1,[]
+7,38,3677,32,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+10,42,3525,32,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+7,37,3042,34,2,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+8,38,3579,28,1,[]
+10,37,2813,31,2,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+6,35,3081,26,1,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+9,40,2957,29,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+4,39,3240,27,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+7,39,4357,28,2,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+5,36,2266,30,1,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+7,40,3543,23,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+5,35,2393,38,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+9,39,2964,22,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
+9,42,3744,21,1,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+9,36,3232,33,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+5,36,2661,31,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+7,38,2842,31,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+9,36,3539,31,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+8,34,2834,27,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+10,38,3308,23,1,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+5,35,3222,28,1,[]
+5,38,2874,24,0,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+7,36,4271,32,0,[]
+5,41,3516,27,0,"[{""disease"": ""sickle cell"", ""mode"": ""recessive"", ""carriers"": 1}]"
+5,36,2187,23,0,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+9,37,3293,26,1,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+7,39,2869,30,1,[]
+9,35,3626,25,2,"[{""disease"": ""cystic fibrosis"", ""mode"": ""recessive"", ""carriers"": 2}]"
+10,38,2803,23,2,"[{""disease"": ""huntington"", ""mode"": ""dominant"", ""carriers"": 1}]"
+10,40,3142,29,0,"[{""disease"": ""diabetes"", ""mode"": ""complex"", ""carriers"": 0}]"
