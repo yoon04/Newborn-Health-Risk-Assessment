@@ -1,9 +1,8 @@
 import numpy as np
 from scipy.integrate import simpson  # For defuzzification
-import pandas as pd
-import ast  # For parsing inherited string to list
+import ast  # For parsing inherited string to list (not used now, but kept for potential future)
 
-# Define membership functions (triangular for simplicity)
+# Define membership functions
 def triangular_mf(x, a, b, c):
     """Triangular membership function."""
     if x <= a or x >= c:
@@ -12,6 +11,18 @@ def triangular_mf(x, a, b, c):
         return (x - a) / (b - a)
     else:
         return (c - x) / (c - b)
+
+def trapezoidal_mf(x, a, b, c, d):
+    """Trapezoidal membership function."""
+    if x < a or x > d:
+        return 0.0
+    elif a <= x < b:
+        return (x - a) / (b - a) if b > a else 1.0
+    elif b <= x <= c:
+        return 1.0
+    elif c < x <= d:
+        return (d - x) / (d - c) if d > c else 1.0
+    return 0.0  # Fallback
 
 # Calculate APGAR score from individual components and categorize
 def calculate_apgar(appearance, pulse, grimace, activity, respiration):
@@ -29,29 +40,29 @@ def calculate_apgar(appearance, pulse, grimace, activity, respiration):
     breakdown = f"APGAR Score: {apgar}/10 ({category}) (Appearance: {appearance}/2 - skin color; Pulse: {pulse}/2 - heart rate; Grimace: {grimace}/2 - reflex; Activity: {activity}/2 - muscle tone; Respiration: {respiration}/2 - breathing)"
     return apgar, breakdown
 
-# Fuzzify inputs (adjusted APGAR categories: low=0-3, medium=4-6, high=7-10)
+# Fuzzify inputs
 def fuzzify_apgar(apgar):
-    low = triangular_mf(apgar, 0, 1.5, 3)
-    medium = triangular_mf(apgar, 3, 5, 7)
-    high = triangular_mf(apgar, 6, 8.5, 10)
+    low = trapezoidal_mf(apgar, 0, 0, 3, 4)
+    medium = trapezoidal_mf(apgar, 3, 4, 6, 7)
+    high = trapezoidal_mf(apgar, 6, 7, 10, 10)
     return {'low': low, 'medium': medium, 'high': high}
 
 def fuzzify_birth_week(week):
-    preterm = triangular_mf(week, 0, 32, 37)
-    term = triangular_mf(week, 35, 39, 42)
-    postterm = triangular_mf(week, 40, 42, 45)
+    preterm = trapezoidal_mf(week, 0, 28, 34, 37)
+    term = trapezoidal_mf(week, 35, 37, 40, 42)
+    postterm = trapezoidal_mf(week, 40, 42, 44, 50)
     return {'preterm': preterm, 'term': term, 'postterm': postterm}
 
 def fuzzify_birth_weight(weight):  # in grams
-    low = triangular_mf(weight, 0, 1500, 2500)
-    normal = triangular_mf(weight, 2000, 3000, 4000)
-    high = triangular_mf(weight, 3500, 4500, 5000)
+    low = trapezoidal_mf(weight, 0, 500, 1500, 2500)
+    normal = trapezoidal_mf(weight, 2000, 2500, 3500, 4000)
+    high = trapezoidal_mf(weight, 3500, 4000, 5000, 6000)
     return {'low': low, 'normal': normal, 'high': high}
 
 def fuzzify_maternal_age(age):
-    young = triangular_mf(age, 0, 18, 25)
-    normal = triangular_mf(age, 20, 30, 35)
-    advanced = triangular_mf(age, 30, 40, 50)
+    young = trapezoidal_mf(age, 0, 10, 18, 25)
+    normal = trapezoidal_mf(age, 20, 25, 30, 35)
+    advanced = trapezoidal_mf(age, 30, 35, 45, 60)
     return {'young': young, 'normal': normal, 'advanced': advanced}
 
 def fuzzify_delivery_comp(delivery_comp):  # 0=Normal Vaginal, 1=Cesarean Section
@@ -183,39 +194,38 @@ def assess_risk(appearance, pulse, grimace, activity, respiration, birth_week, b
         'conclusion': conclusion
     }
 
-# Example single assessment + dataset processing
+# Interactive user input app
 if __name__ == "__main__":
-    # Sample single inputs
-    appearance = 2
-    pulse = 2
-    grimace = 1
-    activity = 2
-    respiration = 1
-    birth_week = 38
-    birth_weight = 3200
-    maternal_age = 28
-    delivery_comp = 0  # Normal Vaginal
-    inherited_diseases = [{'disease': 'Diabetes', 'mode': 'complex', 'carriers': 0}]
+    print("Welcome to the Newborn Health Risk Assessment App (Fuzzy Logic-Based)")
+    print("Please enter the following details:")
     
+    # APGAR components with user-friendly explanations
+    appearance = int(input("Appearance (skin color): Enter 0 for blue/pale all over (bad), 1 for pink body but blue hands/feet (moderate), 2 for completely pink (good): "))
+    pulse = int(input("Pulse (heart rate): Enter 0 for absent (critical), 1 for below 100 bpm (slow), 2 for above 100 bpm (normal): "))
+    grimace = int(input("Grimace (reflex response): Enter 0 for no response (bad), 1 for grimace only (minimal), 2 for grimace and pull away/cough/sneeze (strong): "))
+    activity = int(input("Activity (muscle tone): Enter 0 for limp (bad), 1 for some flex of arms/legs (moderate), 2 for active movement (good): "))
+    respiration = int(input("Respiration (breathing): Enter 0 for absent (critical), 1 for weak cry/slow irregular (weak), 2 for good strong cry (good): "))
+    
+    birth_week = float(input("Birth week (e.g., 38 for full term): "))
+    birth_weight = float(input("Birth weight in grams (e.g., 3200): "))
+    maternal_age = int(input("Maternal age in years (e.g., 28): "))
+    delivery_comp = int(input("Delivery complication: Enter 0 for Normal Vaginal Delivery, 1 for Cesarean Section: "))
+    
+    # Inherited diseases interactively
+    inherited_diseases = []
+    num_diseases = int(input("Number of inherited diseases (enter 0 if none): "))
+    for i in range(num_diseases):
+        print(f"\nInherited Disease {i+1}:")
+        disease = input("Disease name (e.g., Diabetes): ")
+        mode = input("Inheritance mode (e.g., complex, recessive, dominant): ")
+        carriers = int(input("Number of carriers (0-2, e.g., 2 for both parents carriers in recessive diseases): "))
+        inherited_diseases.append({'disease': disease, 'mode': mode, 'carriers': carriers})
+    
+    # Run assessment
     results = assess_risk(appearance, pulse, grimace, activity, respiration, birth_week, birth_weight, maternal_age, delivery_comp, inherited_diseases)
-    print("Single Sample Health Risk Assessment Results:")
+    
+    print("\nHealth Risk Assessment Results:")
     print(f"Overall Risk Probability: {results['overall_risk_probability']:.2f}%")
     print(f"Inherited Disease Probability: {results['inherited_disease_probability']:.2f}%")
     print(f"Total Risk Probability: {results['total_risk_probability']:.2f}%")
     print("Conclusion:", results['conclusion'])
-    
-    # Process dataset from CSV
-    try:
-        data = pd.read_csv('synthetic_newborn_data.csv')  # Update path if needed
-        print("\nDataset Health Risk Assessment Results:")
-        for idx, row in data.iterrows():
-            # Parse inherited string safely
-            try:
-                inherited = ast.literal_eval(row['inherited'])
-            except:
-                inherited = []
-            res = assess_risk(row['appearance'], row['pulse'], row['grimace'], row['activity'], row['respiration'],
-                              row['birth_week'], row['birth_weight'], row['maternal_age'], row['delivery_comp'], inherited)
-            print(f"Sample {idx+1}: Total Risk {res['total_risk_probability']:.2f}%, Conclusion: {res['conclusion']}")
-    except FileNotFoundError:
-        print("CSV file not found. Please provide 'synthetic_newborn_data.csv' or update the path.")
