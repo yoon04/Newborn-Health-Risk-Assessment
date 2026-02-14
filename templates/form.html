@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newborn Health Risk Assessment</title>
+    <style>
+        :root {
+            --primary: #2c7be5;
+            --primary-dark: #1a5bb8;
+            --danger: #e63757;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 920px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 24px 32px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        .content {
+            padding: 32px;
+        }
+        h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-top: 2rem;
+            font-size: 1.4rem;
+        }
+        label {
+            font-weight: 600;
+            display: block;
+            margin: 1.2rem 0 0.5rem;
+            color: #444;
+        }
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(44,123,229,0.15);
+        }
+        .radio-group {
+            display: flex;
+            gap: 2rem;
+            margin: 1rem 0;
+        }
+        .radio-group label {
+            font-weight: normal;
+            margin: 0;
+            cursor: pointer;
+        }
+        .error {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+            display: none;
+        }
+        .disease-controls {
+            margin: 1.5rem 0;
+        }
+        #add-disease {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        #add-disease:hover {
+            background: var(--primary-dark);
+        }
+        .disease-entry {
+            background: var(--light);
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin: 1.2rem 0;
+            position: relative;
+        }
+        .remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            font-size: 1.1rem;
+            line-height: 28px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .remove-btn:hover {
+            background: #c82333;
+        }
+        .submit-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .submit-btn:hover {
+            background: #218838;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Newborn Health Risk Assessment</h1>
+    </div>
+
+    <div class="content">
+        <form id="risk-form" method="POST" novalidate>
+            <h2>APGAR Score Components</h2>
+
+            <label for="appearance">Appearance (skin color)</label>
+            <select name="appearance" id="appearance" required>
+                <option value="">Select...</option>
+                <option value="0">0 — blue/pale all over</option>
+                <option value="1">1 — pink body, blue hands/feet</option>
+                <option value="2">2 — completely pink</option>
+            </select>
+            <div class="error" id="appearance-error">Please select an option</div>
+
+            <label for="pulse">Pulse (heart rate)</label>
+            <select name="pulse" id="pulse" required>
+                <option value="">Select...</option>
+                <option value="0">0 — absent</option>
+                <option value="1">1 — < 100 bpm</option>
+                <option value="2">2 — ≥ 100 bpm</option>
+            </select>
+            <div class="error" id="pulse-error">Please select an option</div>
+
+            <!-- Repeat similar pattern for grimace, activity, respiration -->
+
+            <label for="grimace">Grimace (reflex irritability)</label>
+            <select name="grimace" id="grimace" required>
+                <option value="">Select...</option>
+                <option value="0">0 — no response</option>
+                <option value="1">1 — grimace only</option>
+                <option value="2">2 — grimace + pull away / cry</option>
+            </select>
+            <div class="error" id="grimace-error">Please select an option</div>
+
+            <label for="activity">Activity (muscle tone)</label>
+            <select name="activity" id="activity" required>
+                <option value="">Select...</option>
+                <option value="0">0 — limp / no movement</option>
+                <option value="1">1 — some flexion</option>
+                <option value="2">2 — active movement</option>
+            </select>
+            <div class="error" id="activity-error">Please select an option</div>
+
+            <label for="respiration">Respiration (breathing effort)</label>
+            <select name="respiration" id="respiration" required>
+                <option value="">Select...</option>
+                <option value="0">0 — absent</option>
+                <option value="1">1 — weak / irregular</option>
+                <option value="2">2 — strong cry</option>
+            </select>
+            <div class="error" id="respiration-error">Please select an option</div>
+
+            <h2>Additional Information</h2>
+
+            <label for="birth_week">Gestational Age (weeks)</label>
+            <input type="number" step="0.1" name="birth_week" id="birth_week" min="20" max="45" required placeholder="e.g. 38.5">
+            <div class="error" id="birth_week-error">Enter a value between 20 and 45</div>
+
+            <label for="birth_weight">Birth Weight (grams)</label>
+            <input type="number" name="birth_weight" id="birth_weight" min="500" max="6000" required placeholder="e.g. 3200">
+            <div class="error" id="birth_weight-error">Enter a value between 500 and 6000 grams</div>
+
+            <label for="maternal_age">Maternal Age (years)</label>
+            <input type="number" name="maternal_age" id="maternal_age" min="15" max="60" required placeholder="e.g. 28">
+            <div class="error" id="maternal_age-error">Enter a value between 15 and 60</div>
+
+            <label>Delivery Method</label>
+            <div class="radio-group">
+                <input type="radio" name="delivery_comp" value="0" id="vaginal" required checked>
+                <label for="vaginal">Normal Vaginal Delivery</label>
+                <input type="radio" name="delivery_comp" value="1" id="cesarean">
+                <label for="cesarean">Cesarean Section</label>
+            </div>
+
+            <h2>Inherited / Genetic Conditions</h2>
+            <div class="radio-group">
+                <input type="radio" name="has_genetic" value="no" id="genetic-no" checked>
+                <label for="genetic-no">No</label>
+                <input type="radio" name="has_genetic" value="yes" id="genetic-yes">
+                <label for="genetic-yes">Yes</label>
+            </div>
+
+            <div id="genetic-section" class="hidden">
+                <div class="disease-controls">
+                    <button type="button" id="add-disease">+ Add Disease</button>
+                </div>
+                <div id="diseases-container"></div>
+            </div>
+
+            <button type="submit" class="submit-btn">Calculate Risk Assessment</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Show/hide genetic diseases section
+    const geneticYes = document.getElementById('genetic-yes');
+    const geneticNo  = document.getElementById('genetic-no');
+    const geneticSection = document.getElementById('genetic-section');
+
+    function toggleGenetic() {
+        geneticSection.classList.toggle('hidden', !geneticYes.checked);
+    }
+
+    geneticYes.addEventListener('change', toggleGenetic);
+    geneticNo.addEventListener('change', toggleGenetic);
+    toggleGenetic(); // initial state
+
+    // Dynamic disease fields
+    let diseaseCount = 0;
+
+    document.getElementById('add-disease').addEventListener('click', function() {
+        const container = document.getElementById('diseases-container');
+        const entry = document.createElement('div');
+        entry.className = 'disease-entry';
+        entry.id = `disease-block-${diseaseCount}`;
+        entry.innerHTML = `
+            <button type="button" class="remove-btn" onclick="removeDisease(${diseaseCount})">×</button>
+
+            <label>Disease:</label>
+            <select name="disease_${diseaseCount}" onchange="toggleOther(this, ${diseaseCount})">
+                <option value="">— select —</option>
+                {% for d in common_diseases %}
+                    <option value="{{ d }}">{{ d }}</option>
+                {% endfor %}
+            </select>
+            <div id="other_${diseaseCount}" style="display:none; margin-top:8px;">
+                <input type="text" name="other_disease_${diseaseCount}" placeholder="Specify disease name">
+            </div>
+
+            <label style="margin-top:12px;">Inheritance Mode</label>
+            <input type="text" name="mode_${diseaseCount}" placeholder="e.g. complex, recessive, dominant" required>
+
+            <label style="margin-top:12px;">Number of Carrier Parents (0–2)</label>
+            <select name="carriers_${diseaseCount}">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+            </select>
+        `;
+        container.appendChild(entry);
+        diseaseCount++;
+    });
+
+    function removeDisease(index) {
+        const block = document.getElementById(`disease-block-${index}`);
+        if (block) block.remove();
+    }
+
+    function toggleOther(select, idx) {
+        const otherDiv = document.getElementById(`other_${idx}`);
+        if (otherDiv) {
+            otherDiv.style.display = (select.value === 'Other') ? 'block' : 'none';
+        }
+    }
+
+    // Basic client-side validation before submit
+    document.getElementById('risk-form').addEventListener('submit', function(e) {
+        let valid = true;
+        const requiredFields = ['appearance','pulse','grimace','activity','respiration',
+                                'birth_week','birth_weight','maternal_age'];
+
+        requiredFields.forEach(id => {
+            const el = document.getElementById(id);
+            const err = document.getElementById(id + '-error');
+            if (!el.value.trim()) {
+                err.style.display = 'block';
+                valid = false;
+            } else {
+                err.style.display = 'none';
+            }
+        });
+
+        // Birth week range
+        const week = parseFloat(document.getElementById('birth_week').value);
+        if (isNaN(week) || week < 20 || week > 45) {
+            document.getElementById('birth_week-error').style.display = 'block';
+            valid = false;
+        }
+
+        // Similar for weight & age (you can expand)
+
+        if (!valid) {
+            e.preventDefault();
+            alert('Please correct the highlighted fields.');
+        }
+    });
+</script>
+</body>
+</html>
