@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Assessment Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        h1 { color: #2c3e50; }
+        .section { margin: 25px 0; padding: 15px; border-radius: 6px; }
+        .low    { background: #d4edda; color: #155724; }
+        .moderate { background: #fff3cd; color: #856404; }
+        .high   { background: #f8d7da; color: #721c24; }
+        img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 6px; margin: 20px 0; }
+        .back { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; }
+        .back:hover { background: #2980b9; }
+    </style>
+</head>
+<body>
+    <h1>Health Risk Assessment Results</h1>
+    <div class="section {% if results.total_risk_probability < 30 %}low{% elif results.total_risk_probability < 70 %}moderate{% else %}high{% endif %}">
+        <h2>Overall Conclusion</h2>
+        <p><strong>{{ results.conclusion }}</strong></p>
+    </div>
+    <div class="section">
+        <h2>Key Probabilities</h2>
+        <ul>
+            <li><strong>Birth-related risk (fuzzy logic):</strong> {{ "%.2f"|format(results.overall_risk_probability) }}%</li>
+            <li><strong>Inherited / genetic risk:</strong> {{ "%.2f"|format(results.inherited_disease_probability) }}%</li>
+            <li><strong>Combined total risk:</strong> {{ "%.2f"|format(results.total_risk_probability) }}%</li>
+        </ul>
+    </div>
+    <!-- Inside results.html - replace the old graph section with this -->
+<div class="section">
+    <h2>How Your Information Was Interpreted (Step by Step)</h2>
+    <p>We turned each number you entered into "fuzzy" categories with smooth overlaps.<br>
+    Your real value is shown with a <strong>black dashed line</strong>.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 25px; margin: 25px 0;">
+        <div>
+            <h3>1. Baby's APGAR Score</h3>
+            <img src="{{ results.plot_paths.apgar }}" alt="APGAR" style="width:100%; border-radius:10px;">
+        </div>
+        <div>
+            <h3>2. Weeks of Pregnancy</h3>
+            <img src="{{ results.plot_paths.week }}" alt="Pregnancy Weeks" style="width:100%; border-radius:10px;">
+        </div>
+        <div>
+            <h3>3. Baby's Birth Weight</h3>
+            <img src="{{ results.plot_paths.weight }}" alt="Birth Weight" style="width:100%; border-radius:10px;">
+        </div>
+        <div>
+            <h3>4. Mother's Age</h3>
+            <img src="{{ results.plot_paths.age }}" alt="Maternal Age" style="width:100%; border-radius:10px;">
+        </div>
+    </div>
+    {% if results.plot_paths.genetic %}
+    <div style="margin: 40px 0;">
+        <h3>Inherited / Genetic Conditions Risk</h3>
+        <p>Light blue = basic chance • Dark blue = chance after considering uncertainty</p>
+        <img src="{{ results.plot_paths.genetic }}" alt="Genetic Risks" style="width:100%; max-width:900px; border-radius:10px;">
+    </div>
+    {% endif %}
+    <h2>Final Combined Result</h2>
+    <p>All information was combined using smart rules.<br>
+    The **black line** shows your final risk score — the most balanced point.</p>
+    <img src="{{ results.plot_paths.final }}" alt="Final Risk" style="width:100%; max-width:900px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+</div>
+    <a href="/" class="back">← Back to Assessment Form</a>
+</body>
+</html>
