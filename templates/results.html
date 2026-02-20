@@ -1,70 +1,267 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Risk Assessment Results</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.6; }
-        h1 { color: #2c3e50; }
-        .section { margin: 25px 0; padding: 15px; border-radius: 6px; }
-        .low    { background: #d4edda; color: #155724; }
-        .moderate { background: #fff3cd; color: #856404; }
-        .high   { background: #f8d7da; color: #721c24; }
-        img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 6px; margin: 20px 0; }
-        .back { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; }
-        .back:hover { background: #2980b9; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Risk Assessment Results</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060d1f;--surface:#0d1525;--surface2:#141f35;--border:#1a2e50;--accent:#0ea5e9;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--text:#e2e8f0;--muted:#64748b;--card:#0f1a2e;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+.hero{padding:44px 24px 36px;text-align:center;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#060d1f 0%,#0a1628 60%,#060d1f 100%);position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:600px;height:350px;background:radial-gradient(ellipse,rgba(14,165,233,.1) 0%,transparent 65%);pointer-events:none}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(26px,4.5vw,44px);color:#f8fafc;margin-bottom:10px}
+.hero h1 em{color:var(--accent);font-style:italic}
+.hero p{font-size:14px;color:var(--muted)}
+.main{max-width:900px;margin:36px auto;padding:0 20px}
+
+/* Risk banner */
+.risk-banner{
+  border-radius:16px;padding:28px 28px;margin-bottom:24px;
+  border:1px solid;position:relative;overflow:hidden
+}
+.risk-banner::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;opacity:.08}
+.risk-low{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.3)}
+.risk-low::before{background:var(--green)}
+.risk-moderate{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.3)}
+.risk-moderate::before{background:var(--yellow)}
+.risk-high{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3)}
+.risk-high::before{background:var(--red)}
+.risk-top{display:flex;align-items:center;gap:18px;margin-bottom:14px}
+.risk-icon-big{font-size:44px}
+.risk-badge{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:99px;margin-bottom:6px;display:inline-block}
+.badge-low{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-mod{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-high{background:rgba(239,68,68,.15);color:var(--red)}
+.risk-title{font-size:22px;font-weight:700;color:#f1f5f9;margin-bottom:4px}
+.risk-subtitle{font-size:14px;color:var(--muted);line-height:1.6}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;text-align:center}
+.stat-val{font-size:28px;font-weight:700;line-height:1;margin-bottom:5px}
+.stat-lbl{font-size:11.5px;color:var(--muted)}
+.stat-low .stat-val{color:var(--green)}
+.stat-mod .stat-val{color:var(--yellow)}
+.stat-high .stat-val{color:var(--red)}
+.stat-acc .stat-val{color:var(--accent)}
+
+/* Section headers */
+.section-title{font-size:16px;font-weight:600;color:#f1f5f9;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+/* APGAR breakdown */
+.apgar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px}
+.apgar-top{display:flex;align-items:center;gap:18px;margin-bottom:20px}
+.apgar-ring{width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid;flex-shrink:0}
+.apgar-ring .an{font-size:28px;font-weight:700;line-height:1}
+.apgar-ring .ad{font-size:11px;color:var(--muted)}
+.apgar-info h3{font-size:17px;font-weight:600;color:#f1f5f9;margin-bottom:4px}
+.apgar-info p{font-size:13px;color:var(--muted);line-height:1.6}
+.apgar-comps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.comp-card{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:13px;text-align:center}
+.comp-name{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.comp-score{font-size:22px;font-weight:700;margin-bottom:4px}
+.comp-label{font-size:11px;font-weight:600;margin-bottom:3px}
+.comp-note{font-size:10px;color:var(--muted);line-height:1.4}
+.cscore-0{color:var(--red)}.cscore-1{color:var(--yellow)}.cscore-2{color:var(--green)}
+
+/* Charts */
+.charts-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;margin-top:16px}
+.chart-item h4{font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:10px}
+.chart-item img{width:100%;border-radius:10px;border:1px solid var(--border)}
+.chart-full{margin-top:20px}
+.chart-full h4{font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:10px}
+.chart-full img{width:100%;border-radius:10px;border:1px solid var(--border)}
+
+/* Genetic section */
+.genetic-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px}
+.genetic-item{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-bottom:10px}
+.genetic-name{font-size:14px;font-weight:600;color:#f1f5f9;margin-bottom:4px}
+.genetic-mode{font-size:11.5px;color:var(--accent);margin-bottom:5px}
+.genetic-expl{font-size:12px;color:var(--muted);line-height:1.55}
+.prob-bar-wrap{margin-top:8px}
+.prob-bar-bg{background:var(--surface);border-radius:99px;height:6px;overflow:hidden}
+.prob-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .6s ease}
+.prob-pct{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Back button */
+.back-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;font-size:13.5px;font-weight:600;transition:all .2s;margin-top:10px}
+.back-btn:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:560px){.stats-row{grid-template-columns:1fr 1fr}.apgar-comps{grid-template-columns:1fr 1fr}}
+</style>
 </head>
 <body>
-    <h1>Health Risk Assessment Results</h1>
-    <div class="section {% if results.total_risk_probability < 30 %}low{% elif results.total_risk_probability < 70 %}moderate{% else %}high{% endif %}">
-        <h2>Overall Conclusion</h2>
-        <p><strong>{{ results.conclusion }}</strong></p>
+
+<div class="hero">
+  <h1>Assessment <em>Results</em></h1>
+  <p>Fuzzy logic risk evaluation based on birth indicators and family history</p>
+</div>
+
+<div class="main">
+
+  {% set rc = results.risk_color %}
+  {% set rl = results.risk_level %}
+
+  <!-- Risk banner -->
+  <div class="risk-banner risk-{{ rc }}">
+    <div class="risk-top">
+      <div class="risk-icon-big">
+        {% if rc == 'low' %}✅{% elif rc == 'moderate' %}⚠️{% else %}🚨{% endif %}
+      </div>
+      <div>
+        <div class="risk-badge badge-{% if rc == 'moderate' %}mod{% else %}{{ rc }}{% endif %}">
+          {{ rl }} Risk
+        </div>
+        <div class="risk-title">
+          {% if rc == 'low' %}Baby appears to be in good health{% elif rc == 'moderate' %}Some factors require attention{% else %}Significant risk factors detected{% endif %}
+        </div>
+        <div class="risk-subtitle">{{ results.recommendation }}</div>
+      </div>
     </div>
-    <div class="section">
-        <h2>Key Probabilities</h2>
-        <ul>
-            <li><strong>Birth-related risk (fuzzy logic):</strong> {{ "%.2f"|format(results.overall_risk_probability) }}%</li>
-            <li><strong>Inherited / genetic risk:</strong> {{ "%.2f"|format(results.inherited_disease_probability) }}%</li>
-            <li><strong>Combined total risk:</strong> {{ "%.2f"|format(results.total_risk_probability) }}%</li>
-        </ul>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card {% if results.overall_risk_probability < 30 %}stat-low{% elif results.overall_risk_probability < 70 %}stat-mod{% else %}stat-high{% endif %}">
+      <div class="stat-val">{{ "%.1f"|format(results.overall_risk_probability) }}%</div>
+      <div class="stat-lbl">Birth-Factor Risk</div>
     </div>
-    <!-- Inside results.html - replace the old graph section with this -->
-<div class="section">
-    <h2>How Your Information Was Interpreted (Step by Step)</h2>
-    <p>We turned each number you entered into "fuzzy" categories with smooth overlaps.<br>
-    Your real value is shown with a <strong>black dashed line</strong>.</p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 25px; margin: 25px 0;">
-        <div>
-            <h3>1. Baby's APGAR Score</h3>
-            <img src="{{ results.plot_paths.apgar }}" alt="APGAR" style="width:100%; border-radius:10px;">
-        </div>
-        <div>
-            <h3>2. Weeks of Pregnancy</h3>
-            <img src="{{ results.plot_paths.week }}" alt="Pregnancy Weeks" style="width:100%; border-radius:10px;">
-        </div>
-        <div>
-            <h3>3. Baby's Birth Weight</h3>
-            <img src="{{ results.plot_paths.weight }}" alt="Birth Weight" style="width:100%; border-radius:10px;">
-        </div>
-        <div>
-            <h3>4. Mother's Age</h3>
-            <img src="{{ results.plot_paths.age }}" alt="Maternal Age" style="width:100%; border-radius:10px;">
-        </div>
+    <div class="stat-card {% if results.inherited_disease_probability < 15 %}stat-low{% elif results.inherited_disease_probability < 40 %}stat-mod{% else %}stat-high{% endif %}">
+      <div class="stat-val">{{ "%.1f"|format(results.inherited_disease_probability) }}%</div>
+      <div class="stat-lbl">Inherited Risk</div>
     </div>
+    <div class="stat-card {% if results.total_risk_probability < 30 %}stat-low{% elif results.total_risk_probability < 70 %}stat-mod{% else %}stat-high{% endif %}">
+      <div class="stat-val">{{ "%.1f"|format(results.total_risk_probability) }}%</div>
+      <div class="stat-lbl">Combined Total Risk</div>
+    </div>
+  </div>
+
+  <!-- APGAR breakdown -->
+  <div class="apgar-card">
+    <div class="section-title">👶 APGAR Score Breakdown</div>
+    <div class="apgar-top">
+      <div class="apgar-ring {{ results.apgar_severity }}">
+        <div class="an">{{ results.apgar_score }}</div>
+        <div class="ad">/10</div>
+      </div>
+      <div class="apgar-info">
+        <h3>{{ results.apgar_category }}</h3>
+        <p>The APGAR score is assessed at 1 and 5 minutes after birth. Scores of 7–10 are generally normal; 4–6 may need support; 0–3 require immediate intervention.</p>
+      </div>
+    </div>
+    <div class="apgar-comps">
+      {% for field, detail in results.component_detail.items() %}
+      <div class="comp-card">
+        <div class="comp-name">
+          {% if field == 'appearance' %}🎨 Appearance
+          {% elif field == 'pulse' %}❤️ Pulse
+          {% elif field == 'grimace' %}😮 Grimace
+          {% elif field == 'activity' %}💪 Activity
+          {% elif field == 'respiration' %}🫁 Respiration{% endif %}
+        </div>
+        <div class="comp-score cscore-{{ detail.score }}">{{ detail.score }}/2</div>
+        <div class="comp-label cscore-{{ detail.score }}">{{ detail.label }}</div>
+        <div class="comp-note">{{ detail.note }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-card">
+    <div class="section-title">📊 How Your Inputs Were Interpreted</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Each input was converted to fuzzy categories with smooth overlaps. The <strong style="color:#f8fafc">dashed white line</strong> shows your actual value.</p>
+    <div class="charts-grid">
+      <div class="chart-item">
+        <h4>Baby's APGAR Score</h4>
+        <img src="{{ results.plot_paths.apgar }}" alt="APGAR fuzzy">
+      </div>
+      <div class="chart-item">
+        <h4>Gestational Age</h4>
+        <img src="{{ results.plot_paths.week }}" alt="Pregnancy weeks fuzzy">
+      </div>
+      <div class="chart-item">
+        <h4>Birth Weight</h4>
+        <img src="{{ results.plot_paths.weight }}" alt="Birth weight fuzzy">
+      </div>
+      <div class="chart-item">
+        <h4>Mother's Age</h4>
+        <img src="{{ results.plot_paths.age }}" alt="Maternal age fuzzy">
+      </div>
+    </div>
+
     {% if results.plot_paths.genetic %}
-    <div style="margin: 40px 0;">
-        <h3>Inherited / Genetic Conditions Risk</h3>
-        <p>Light blue = basic chance • Dark blue = chance after considering uncertainty</p>
-        <img src="{{ results.plot_paths.genetic }}" alt="Genetic Risks" style="width:100%; max-width:900px; border-radius:10px;">
+    <div class="chart-full" style="margin-top:24px">
+      <h4>Inherited / Genetic Risk by Condition</h4>
+      <img src="{{ results.plot_paths.genetic }}" alt="Genetic risks">
     </div>
     {% endif %}
-    <h2>Final Combined Result</h2>
-    <p>All information was combined using smart rules.<br>
-    The **black line** shows your final risk score — the most balanced point.</p>
-    <img src="{{ results.plot_paths.final }}" alt="Final Risk" style="width:100%; max-width:900px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+
+    <div class="chart-full">
+      <h4>Final Fuzzy Risk Calculation</h4>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">All inputs combined using fuzzy rules — the white dashed line shows your final defuzzified risk score.</p>
+      <img src="{{ results.plot_paths.final }}" alt="Final risk output">
+    </div>
+  </div>
+
+  <!-- Birth info summary -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px">
+    <div class="section-title">📋 Birth Summary</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">🗓️ Gestational Age</div>
+        <div style="font-size:16px;font-weight:600;color:#f1f5f9">{{ results.birth_week }} weeks</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">⚖️ Birth Weight</div>
+        <div style="font-size:16px;font-weight:600;color:#f1f5f9">{{ results.get('weight_display', results.birth_weight_g|round|int ~ 'g') }}</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">👩 Mother's Age</div>
+        <div style="font-size:16px;font-weight:600;color:#f1f5f9">{{ results.maternal_age }} years</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">🏥 Delivery</div>
+        <div style="font-size:16px;font-weight:600;color:#f1f5f9">{{ results.delivery_type }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Genetic risk -->
+  {% if results.inherited_probs_list %}
+  <div class="genetic-card">
+    <div class="section-title">🧬 Inherited Condition Risk</div>
+    {% for p in results.inherited_probs_list %}
+    <div class="genetic-item">
+      <div class="genetic-name">{{ p.disease }}</div>
+      <div class="genetic-mode">{{ p.mode_label }}</div>
+      <div class="genetic-expl">{{ p.expl }}</div>
+      <div class="prob-bar-wrap">
+      <div class="prob-bar-bg">
+          <div class="prob-bar-fill"
+              style="--prob-width: {{ [p.base_prob * 100, 100]|min }}%;">
+          </div>
+      </div>
+      <div class="prob-pct">
+          {{ "%.0f"|format(p.base_prob * 100) }}% probability
+      </div>
 </div>
-    <a href="/" class="back">← Back to Assessment Form</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Disclaimer -->
+  <div style="background:rgba(14,165,233,.04);border:1px solid rgba(14,165,233,.15);border-radius:12px;padding:16px;margin-bottom:20px">
+    <p style="font-size:12px;color:var(--muted);line-height:1.7">
+      <strong style="color:#94a3b8">About this assessment:</strong> This tool uses fuzzy logic to handle the natural uncertainty in medical measurements — for example, a baby born at 36.5 weeks is not clearly "preterm" or "term" but falls between both categories. The probabilities shown reflect this uncertainty. This is <em>not</em> a clinical diagnosis. Please consult a healthcare professional for medical decisions.
+    </p>
+  </div>
+
+  <a href="/" class="back-btn">&#x2190; New Assessment</a>
+
+</div>
 </body>
 </html>
