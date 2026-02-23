@@ -1,22 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<<<<<<< Updated upstream
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Risk Assessment Results</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.6; }
-        h1 { color: #2c3e50; }
-        .section { margin: 25px 0; padding: 15px; border-radius: 6px; }
-        .low    { background: #d4edda; color: #155724; }
-        .moderate { background: #fff3cd; color: #856404; }
-        .high   { background: #f8d7da; color: #721c24; }
-        img { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 6px; margin: 20px 0; }
-        .back { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; }
-        .back:hover { background: #2980b9; }
-    </style>
-=======
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Risk Assessment Results</title>
@@ -107,58 +91,113 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .back-btn:hover{border-color:var(--accent);color:var(--accent)}
 @media(max-width:560px){.stats-row{grid-template-columns:1fr 1fr}.apgar-comps{grid-template-columns:1fr 1fr}}
 </style>
->>>>>>> Stashed changes
 </head>
 <body>
-    <h1>Health Risk Assessment Results</h1>
-    <div class="section {% if results.total_risk_probability < 30 %}low{% elif results.total_risk_probability < 70 %}moderate{% else %}high{% endif %}">
-        <h2>Overall Conclusion</h2>
-        <p><strong>{{ results.conclusion }}</strong></p>
+
+<div class="hero">
+  <h1>Assessment <em>Results</em></h1>
+  <p>Fuzzy logic risk evaluation based on birth indicators and family history</p>
+</div>
+
+<div class="main">
+
+  {% set rc = results.risk_color %}
+  {% set rl = results.risk_level %}
+
+  <!-- Risk banner -->
+  <div class="risk-banner risk-{{ rc }}">
+    <div class="risk-top">
+      <div class="risk-icon-big">
+        {% if rc == 'low' %}✅{% elif rc == 'moderate' %}⚠️{% else %}🚨{% endif %}
+      </div>
+      <div>
+        <div class="risk-badge badge-{% if rc == 'moderate' %}mod{% else %}{{ rc }}{% endif %}">
+          {{ rl }} Risk
+        </div>
+        <div class="risk-title">
+          {% if rc == 'low' %}Baby appears to be in good health{% elif rc == 'moderate' %}Some factors require attention{% else %}Significant risk factors detected{% endif %}
+        </div>
+        <div class="risk-subtitle">{{ results.recommendation }}</div>
+      </div>
     </div>
-    <div class="section">
-        <h2>Key Probabilities</h2>
-        <ul>
-            <li><strong>Birth-related risk (fuzzy logic):</strong> {{ "%.2f"|format(results.overall_risk_probability) }}%</li>
-            <li><strong>Inherited / genetic risk:</strong> {{ "%.2f"|format(results.inherited_disease_probability) }}%</li>
-            <li><strong>Combined total risk:</strong> {{ "%.2f"|format(results.total_risk_probability) }}%</li>
-        </ul>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-card {% if results.overall_risk_probability < 30 %}stat-low{% elif results.overall_risk_probability < 70 %}stat-mod{% else %}stat-high{% endif %}">
+      <div class="stat-val">{{ "%.1f"|format(results.overall_risk_probability) }}%</div>
+      <div class="stat-lbl">Birth-Factor Risk</div>
     </div>
-    <!-- Inside results.html - replace the old graph section with this -->
-<div class="section">
-    <h2>How Your Information Was Interpreted (Step by Step)</h2>
-    <p>We turned each number you entered into "fuzzy" categories with smooth overlaps.<br>
-    Your real value is shown with a <strong>black dashed line</strong>.</p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 25px; margin: 25px 0;">
-        <div>
-            <h3>1. Baby's APGAR Score</h3>
-            <img src="{{ results.plot_paths.apgar }}" alt="APGAR" style="width:100%; border-radius:10px;">
-        </div>
-        <div>
-            <h3>2. Weeks of Pregnancy</h3>
-            <img src="{{ results.plot_paths.week }}" alt="Pregnancy Weeks" style="width:100%; border-radius:10px;">
-        </div>
-        <div>
-            <h3>3. Baby's Birth Weight</h3>
-            <img src="{{ results.plot_paths.weight }}" alt="Birth Weight" style="width:100%; border-radius:10px;">
-        </div>
-        <div>
-            <h3>4. Mother's Age</h3>
-            <img src="{{ results.plot_paths.age }}" alt="Maternal Age" style="width:100%; border-radius:10px;">
-        </div>
+    <div class="stat-card {% if results.inherited_disease_probability < 15 %}stat-low{% elif results.inherited_disease_probability < 40 %}stat-mod{% else %}stat-high{% endif %}">
+      <div class="stat-val">{{ "%.1f"|format(results.inherited_disease_probability) }}%</div>
+      <div class="stat-lbl">Inherited Risk</div>
     </div>
+    <div class="stat-card {% if results.total_risk_probability < 30 %}stat-low{% elif results.total_risk_probability < 70 %}stat-mod{% else %}stat-high{% endif %}">
+      <div class="stat-val">{{ "%.1f"|format(results.total_risk_probability) }}%</div>
+      <div class="stat-lbl">Combined Total Risk</div>
+    </div>
+  </div>
+
+  <!-- APGAR breakdown -->
+  <div class="apgar-card">
+    <div class="section-title">👶 APGAR Score Breakdown</div>
+    <div class="apgar-top">
+      <div class="apgar-ring {{ results.apgar_severity }}">
+        <div class="an">{{ results.apgar_score }}</div>
+        <div class="ad">/10</div>
+      </div>
+      <div class="apgar-info">
+        <h3>{{ results.apgar_category }}</h3>
+        <p>The APGAR score is assessed at 1 and 5 minutes after birth. Scores of 7–10 are generally normal; 4–6 may need support; 0–3 require immediate intervention.</p>
+      </div>
+    </div>
+    <div class="apgar-comps">
+      {% for field, detail in results.component_detail.items() %}
+      <div class="comp-card">
+        <div class="comp-name">
+          {% if field == 'appearance' %}🎨 Appearance
+          {% elif field == 'pulse' %}❤️ Pulse
+          {% elif field == 'grimace' %}😮 Grimace
+          {% elif field == 'activity' %}💪 Activity
+          {% elif field == 'respiration' %}🫁 Respiration{% endif %}
+        </div>
+        <div class="comp-score cscore-{{ detail.score }}">{{ detail.score }}/2</div>
+        <div class="comp-label cscore-{{ detail.score }}">{{ detail.label }}</div>
+        <div class="comp-note">{{ detail.note }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-card">
+    <div class="section-title">📊 How Your Inputs Were Interpreted</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Each input was converted to fuzzy categories with smooth overlaps. The <strong style="color:#f8fafc">dashed white line</strong> shows your actual value.</p>
+    <div class="charts-grid">
+      <div class="chart-item">
+        <h4>Baby's APGAR Score</h4>
+        <img src="{{ results.plot_paths.apgar }}" alt="APGAR fuzzy">
+      </div>
+      <div class="chart-item">
+        <h4>Gestational Age</h4>
+        <img src="{{ results.plot_paths.week }}" alt="Pregnancy weeks fuzzy">
+      </div>
+      <div class="chart-item">
+        <h4>Birth Weight</h4>
+        <img src="{{ results.plot_paths.weight }}" alt="Birth weight fuzzy">
+      </div>
+      <div class="chart-item">
+        <h4>Mother's Age</h4>
+        <img src="{{ results.plot_paths.age }}" alt="Maternal age fuzzy">
+      </div>
+    </div>
+
     {% if results.plot_paths.genetic %}
-    <div style="margin: 40px 0;">
-        <h3>Inherited / Genetic Conditions Risk</h3>
-        <p>Light blue = basic chance • Dark blue = chance after considering uncertainty</p>
-        <img src="{{ results.plot_paths.genetic }}" alt="Genetic Risks" style="width:100%; max-width:900px; border-radius:10px;">
+    <div class="chart-full" style="margin-top:24px">
+      <h4>Inherited / Genetic Risk by Condition</h4>
+      <img src="{{ results.plot_paths.genetic }}" alt="Genetic risks">
     </div>
     {% endif %}
-<<<<<<< Updated upstream
-    <h2>Final Combined Result</h2>
-    <p>All information was combined using smart rules.<br>
-    The **black line** shows your final risk score — the most balanced point.</p>
-    <img src="{{ results.plot_paths.final }}" alt="Final Risk" style="width:100%; max-width:900px; border-radius:10px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-=======
 
     <div class="chart-full">
       <h4>Final Fuzzy Risk Calculation</h4>
@@ -227,8 +266,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
   <a href="/" class="back-btn">&#x2190; New Assessment</a>
 
->>>>>>> Stashed changes
 </div>
-    <a href="/" class="back">← Back to Assessment Form</a>
 </body>
 </html>

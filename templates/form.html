@@ -1,260 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Newborn Health Risk Assessment</title>
-    <style>
-        :root {
-            --primary: #2c7be5;
-            --primary-dark: #1a5bb8;
-            --danger: #e63757;
-            --light: #f8f9fa;
-            --gray: #6c757d;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f4f6f9;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 920px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            overflow: hidden;
-        }
-        .header {
-            background: var(--primary);
-            color: white;
-            padding: 24px 32px;
-            text-align: center;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-        }
-        .content {
-            padding: 32px;
-        }
-        h2 {
-            color: #2c3e50;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-            margin-top: 2rem;
-            font-size: 1.4rem;
-        }
-        label {
-            font-weight: 600;
-            display: block;
-            margin: 1.2rem 0 0.5rem;
-            color: #444;
-        }
-        input[type="number"], input[type="text"], select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(44,123,229,0.15);
-        }
-        .radio-group {
-            display: flex;
-            gap: 2rem;
-            margin: 1rem 0;
-        }
-        .radio-group label {
-            font-weight: normal;
-            margin: 0;
-            cursor: pointer;
-        }
-        .error {
-            color: var(--danger);
-            font-size: 0.9rem;
-            margin-top: 0.3rem;
-            display: none;
-        }
-        .disease-controls {
-            margin: 1.5rem 0;
-        }
-        #add-disease {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-        #add-disease:hover {
-            background: var(--primary-dark);
-        }
-        .disease-entry {
-            background: var(--light);
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 1.2rem;
-            margin: 1.2rem 0;
-            position: relative;
-        }
-        .remove-btn {
-            position: absolute;
-            top: 10px;
-            right: 12px;
-            background: var(--danger);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            font-size: 1.1rem;
-            line-height: 28px;
-            text-align: center;
-            cursor: pointer;
-        }
-        .remove-btn:hover {
-            background: #c82333;
-        }
-        .submit-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 14px 32px;
-            font-size: 1.1rem;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 2.5rem;
-            width: 100%;
-            max-width: 400px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .submit-btn:hover {
-            background: #218838;
-        }
-        .hidden {
-            display: none !important;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newborn Health Risk Assessment</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060d1f;--surface:#0d1525;--surface2:#141f35;--border:#1a2e50;--accent:#0ea5e9;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--text:#e2e8f0;--muted:#64748b;--card:#0f1a2e;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px}
+.hero{background:linear-gradient(135deg,#060d1f 0%,#0a1628 50%,#060d1f 100%);border-bottom:1px solid var(--border);padding:52px 24px 44px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:700px;height:400px;background:radial-gradient(ellipse,rgba(14,165,233,.12) 0%,transparent 65%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);border-radius:99px;padding:7px 18px;font-size:12.5px;color:var(--accent);font-weight:500;margin-bottom:22px;letter-spacing:.4px}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(30px,5.5vw,52px);line-height:1.1;color:#f8fafc;margin-bottom:16px}
+.hero h1 em{color:var(--accent);font-style:italic}
+.hero p{font-size:15px;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.75}
+.progress-outer{max-width:840px;margin:36px auto 0;padding:0 24px}
+.progress-bar{display:flex;align-items:center;gap:0}
+.prog-step{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;min-width:70px}
+.prog-dot{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);transition:all .35s;position:relative;z-index:1}
+.prog-dot.active{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 20px rgba(14,165,233,.45)}
+.prog-dot.done{background:var(--green);border-color:var(--green);color:#fff}
+.prog-line{flex:1;height:2px;background:var(--border);border-radius:2px;transition:background .35s}
+.prog-line.done{background:var(--green)}
+.prog-label{font-size:11px;color:var(--muted);text-align:center;white-space:nowrap;transition:color .35s}
+.prog-label.active{color:var(--accent);font-weight:600}
+.main{max-width:840px;margin:36px auto;padding:0 20px}
+.disclaimer{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.18);border-radius:10px;padding:13px 16px;margin-bottom:20px;font-size:12px;color:#d97706;line-height:1.55}
+.sec-card{background:var(--card);border:1px solid var(--border);border-radius:18px;margin-bottom:20px;overflow:hidden;display:none;animation:fadeUp .4s cubic-bezier(.4,0,.2,1)}
+.sec-card.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.card-hd{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.card-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.card-hd h2{font-size:17px;font-weight:600;color:#f1f5f9;margin-bottom:2px}
+.card-hd p{font-size:12.5px;color:var(--muted)}
+.card-bd{padding:24px}
+.apgar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px}
+.apgar-lbl{font-size:12.5px;font-weight:600;color:#94a3b8;margin-bottom:9px}
+.apgar-opts{display:flex;flex-direction:column;gap:7px}
+.apgar-opt{display:flex;align-items:flex-start;gap:11px;padding:11px 14px;border:1.5px solid var(--border);border-radius:11px;cursor:pointer;transition:all .2s;background:var(--surface)}
+.apgar-opt:hover{border-color:var(--accent);background:rgba(14,165,233,.05)}
+.apgar-opt input{display:none}
+.apgar-opt.sel0{border-color:var(--red)!important;background:rgba(239,68,68,.07)!important}
+.apgar-opt.sel1{border-color:var(--yellow)!important;background:rgba(245,158,11,.07)!important}
+.apgar-opt.sel2{border-color:var(--green)!important;background:rgba(34,197,94,.07)!important}
+.opt-score{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px}
+.s0{background:rgba(239,68,68,.15);color:var(--red)}.s1{background:rgba(245,158,11,.15);color:var(--yellow)}.s2{background:rgba(34,197,94,.15);color:var(--green)}
+.opt-txt strong{font-size:13px;color:#e2e8f0;display:block;margin-bottom:2px}
+.opt-txt span{font-size:11px;color:var(--muted);line-height:1.45}
+.score-display{background:var(--surface2);border:1px solid var(--border);border-radius:13px;padding:16px 22px;margin-top:22px;display:flex;align-items:center;gap:18px}
+.score-ring{width:76px;height:76px;border-radius:50%;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid var(--accent);transition:all .35s}
+.score-ring .sn{font-size:26px;font-weight:700;color:var(--accent);line-height:1;transition:color .35s}
+.score-ring .sd{font-size:11px;color:var(--muted)}
+.score-info h3{font-size:15px;font-weight:600;color:#f1f5f9;margin-bottom:5px}
+.score-info p{font-size:12.5px;color:var(--muted);line-height:1.55}
+.fg{margin-bottom:20px}
+.fl{font-size:12.5px;font-weight:600;color:#94a3b8;margin-bottom:8px;display:block}
+.irow{display:flex;gap:16px}
+.irow .fg{flex:1}
+.fi{width:100%;padding:12px 15px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14.5px;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif}
+.fi:focus{border-color:var(--accent)}.fi::placeholder{color:var(--muted)}.fi.err{border-color:var(--red)}
+.hint{font-size:11px;color:var(--muted);margin-top:5px}
+.ferr{font-size:11px;color:var(--red);margin-top:4px;display:none}.ferr.show{display:block}
+.wrow{display:flex;gap:10px}
+.winput{flex:1}
+.unit-tog{display:flex;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.ubtn{padding:10px 16px;background:var(--surface2);border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .2s;border-right:1px solid var(--border)}
+.ubtn:last-child{border-right:none}.ubtn.active{background:var(--accent);color:#fff}.ubtn:hover:not(.active){background:rgba(14,165,233,.08);color:var(--accent)}
+.del-cards{display:flex;gap:12px}
+.del-card{flex:1;padding:16px;border:1.5px solid var(--border);border-radius:13px;cursor:pointer;text-align:center;background:var(--surface);transition:all .2s}
+.del-card:hover{border-color:var(--accent);background:rgba(14,165,233,.04)}.del-card.sel{border-color:var(--accent);background:rgba(14,165,233,.08)}
+.del-card input{display:none}.del-icon{font-size:30px;margin-bottom:7px}
+.del-card strong{display:block;font-size:13px;color:#e2e8f0;margin-bottom:3px}.del-card span{font-size:11px;color:var(--muted)}
+.gen-tog{display:flex;gap:10px;margin-bottom:20px}
+.togbtn{flex:1;padding:12px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;font-family:'DM Sans',sans-serif}
+.togbtn.active{background:rgba(14,165,233,.1);border-color:var(--accent);color:var(--accent)}
+.dis-container{display:flex;flex-direction:column;gap:12px}
+.dis-block{background:var(--surface2);border:1px solid var(--border);border-radius:13px;padding:18px;position:relative;animation:fadeUp .3s ease}
+.dis-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.dis-hd h4{font-size:13px;font-weight:600;color:#94a3b8}
+.rem-btn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);border-radius:8px;padding:4px 11px;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;transition:all .2s}
+.rem-btn:hover{background:rgba(239,68,68,.2)}
+.dis-frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:540px){.dis-frow{grid-template-columns:1fr}}
+.fsel{width:100%;padding:10px 13px;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;outline:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+.fsel:focus{border-color:var(--accent)}
+.mode-hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5}
+.add-btn{display:flex;align-items:center;gap:8px;padding:11px 16px;background:rgba(14,165,233,.05);border:1.5px dashed rgba(14,165,233,.25);border-radius:10px;cursor:pointer;color:var(--accent);font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;transition:all .2s;margin-top:6px}
+.add-btn:hover{background:rgba(14,165,233,.1);border-color:var(--accent)}
+.nav-bar{display:flex;justify-content:space-between;align-items:center;padding-top:22px}
+.btn{padding:11px 26px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .2s;display:inline-flex;align-items:center;gap:7px}
+.btn-ghost{background:var(--surface2);border:1.5px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{color:var(--text);border-color:#334155}
+.btn-next{background:var(--accent);color:#fff}
+.btn-next:hover{background:#0284c7;transform:translateY(-1px);box-shadow:0 8px 24px rgba(14,165,233,.3)}
+.btn-sub{background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;font-size:15px;padding:13px 36px}
+.btn-sub:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(34,197,94,.35)}
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.rev-item{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+.rev-item .rl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.rev-item .rv{font-size:15px;font-weight:600;color:#f1f5f9}
+@media(max-width:500px){.review-grid,.irow{grid-template-columns:1fr;flex-direction:column}}
+</style>
 </head>
 <body>
-
-<div class="container">
-    <div class="header">
-        <h1>Newborn Health Risk Assessment</h1>
-    </div>
-
-    <div class="content">
-        <form id="risk-form" method="POST" novalidate>
-            <h2>APGAR Score Components</h2>
-
-            <label for="appearance">Appearance (skin color)</label>
-            <select name="appearance" id="appearance" required>
-                <option value="">Select...</option>
-                <option value="0">0 — blue/pale all over</option>
-                <option value="1">1 — pink body, blue hands/feet</option>
-                <option value="2">2 — completely pink</option>
-            </select>
-            <div class="error" id="appearance-error">Please select an option</div>
-
-            <label for="pulse">Pulse (heart rate)</label>
-            <select name="pulse" id="pulse" required>
-                <option value="">Select...</option>
-                <option value="0">0 — absent</option>
-                <option value="1">1 — < 100 bpm</option>
-                <option value="2">2 — ≥ 100 bpm</option>
-            </select>
-            <div class="error" id="pulse-error">Please select an option</div>
-
-            <!-- Repeat similar pattern for grimace, activity, respiration -->
-
-            <label for="grimace">Grimace (reflex irritability)</label>
-            <select name="grimace" id="grimace" required>
-                <option value="">Select...</option>
-                <option value="0">0 — no response</option>
-                <option value="1">1 — grimace only</option>
-                <option value="2">2 — grimace + pull away / cry</option>
-            </select>
-            <div class="error" id="grimace-error">Please select an option</div>
-
-            <label for="activity">Activity (muscle tone)</label>
-            <select name="activity" id="activity" required>
-                <option value="">Select...</option>
-                <option value="0">0 — limp / no movement</option>
-                <option value="1">1 — some flexion</option>
-                <option value="2">2 — active movement</option>
-            </select>
-            <div class="error" id="activity-error">Please select an option</div>
-
-            <label for="respiration">Respiration (breathing effort)</label>
-            <select name="respiration" id="respiration" required>
-                <option value="">Select...</option>
-                <option value="0">0 — absent</option>
-                <option value="1">1 — weak / irregular</option>
-                <option value="2">2 — strong cry</option>
-            </select>
-            <div class="error" id="respiration-error">Please select an option</div>
-
-            <h2>Additional Information</h2>
-
-            <label for="birth_week">Gestational Age (weeks)</label>
-            <input type="number" step="0.1" name="birth_week" id="birth_week" min="20" max="45" required placeholder="e.g. 38.5">
-            <div class="error" id="birth_week-error">Enter a value between 20 and 45</div>
-
-            <label for="birth_weight">Birth Weight (grams)</label>
-            <input type="number" name="birth_weight" id="birth_weight" min="500" max="6000" required placeholder="e.g. 3200">
-            <div class="error" id="birth_weight-error">Enter a value between 500 and 6000 grams</div>
-
-            <label for="maternal_age">Maternal Age (years)</label>
-            <input type="number" name="maternal_age" id="maternal_age" min="15" max="60" required placeholder="e.g. 28">
-            <div class="error" id="maternal_age-error">Enter a value between 15 and 60</div>
-
-            <label>Delivery Method</label>
-            <div class="radio-group">
-                <input type="radio" name="delivery_comp" value="0" id="vaginal" required checked>
-                <label for="vaginal">Normal Vaginal Delivery</label>
-                <input type="radio" name="delivery_comp" value="1" id="cesarean">
-                <label for="cesarean">Cesarean Section</label>
-            </div>
-
-            <h2>Inherited / Genetic Conditions</h2>
-            <div class="radio-group">
-                <input type="radio" name="has_genetic" value="no" id="genetic-no" checked>
-                <label for="genetic-no">No</label>
-                <input type="radio" name="has_genetic" value="yes" id="genetic-yes">
-                <label for="genetic-yes">Yes</label>
-            </div>
-
-            <div id="genetic-section" class="hidden">
-                <div class="disease-controls">
-                    <button type="button" id="add-disease">+ Add Disease</button>
-                </div>
-                <div id="diseases-container"></div>
-            </div>
-
-            <button type="submit" class="submit-btn">Calculate Risk Assessment</button>
-        </form>
-    </div>
+<div class="hero">
+  <div class="hero-badge">🩺 Fuzzy Logic Medical Assessment</div>
+  <h1>Newborn Health <em>Risk Assessment</em></h1>
+  <p>A clinically-informed tool using fuzzy logic to evaluate newborn health indicators and provide risk insights for parents and healthcare providers.</p>
 </div>
 
-<<<<<<< Updated upstream
-<script>
-    // Show/hide genetic diseases section
-    const geneticYes = document.getElementById('genetic-yes');
-    const geneticNo  = document.getElementById('genetic-no');
-    const geneticSection = document.getElementById('genetic-section');
-=======
 <div class="main">
   <div class="progress-outer">
     <div class="progress-bar">
@@ -468,53 +323,33 @@
     const INHERITANCE_MODES = {{ inheritance_modes | tojson }};
     const COMMON_DISEASES = {{ common_diseases | tojson }};
     let curStep=1, apgarVals={}, disCount=0, genOn=false;
->>>>>>> Stashed changes
 
-    function toggleGenetic() {
-        geneticSection.classList.toggle('hidden', !geneticYes.checked);
-    }
+function refreshProg(){
+  for(let i=1;i<=4;i++){
+    const d=document.getElementById('dot'+i),l=document.getElementById('lbl'+i),li=document.getElementById('line'+i);
+    d.className='prog-dot'+(i<curStep?' done':i===curStep?' active':'');
+    l.className='prog-label'+(i===curStep?' active':'');
+    if(li)li.className='prog-line'+(i<curStep?' done':'');
+  }
+  document.querySelectorAll('.sec-card').forEach((c,i)=>c.classList.toggle('active',i+1===curStep));
+}
+function goNext(f){if(!validate(f))return;if(f===3)buildReview();curStep=f+1;refreshProg();window.scrollTo({top:0,behavior:'smooth'});}
+function goPrev(f){curStep=f-1;refreshProg();window.scrollTo({top:0,behavior:'smooth'});}
 
-    geneticYes.addEventListener('change', toggleGenetic);
-    geneticNo.addEventListener('change', toggleGenetic);
-    toggleGenetic(); // initial state
+function showE(e,f){document.getElementById(e).classList.add('show');if(f)document.getElementById(f).classList.add('err');}
+function hideE(e,f){document.getElementById(e).classList.remove('show');if(f)document.getElementById(f).classList.remove('err');}
 
-    // Dynamic disease fields
-    let diseaseCount = 0;
-
-    document.getElementById('add-disease').addEventListener('click', function() {
-        const container = document.getElementById('diseases-container');
-        const entry = document.createElement('div');
-        entry.className = 'disease-entry';
-        entry.id = `disease-block-${diseaseCount}`;
-        entry.innerHTML = `
-            <button type="button" class="remove-btn" onclick="removeDisease(${diseaseCount})">×</button>
-
-            <label>Disease:</label>
-            <select name="disease_${diseaseCount}" onchange="toggleOther(this, ${diseaseCount})">
-                <option value="">— select —</option>
-                {% for d in common_diseases %}
-                    <option value="{{ d }}">{{ d }}</option>
-                {% endfor %}
-            </select>
-            <div id="other_${diseaseCount}" style="display:none; margin-top:8px;">
-                <input type="text" name="other_disease_${diseaseCount}" placeholder="Specify disease name">
-            </div>
-
-            <label style="margin-top:12px;">Inheritance Mode</label>
-            <input type="text" name="mode_${diseaseCount}" placeholder="e.g. complex, recessive, dominant" required>
-
-            <label style="margin-top:12px;">Number of Carrier Parents (0–2)</label>
-            <select name="carriers_${diseaseCount}">
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-            </select>
-        `;
-        container.appendChild(entry);
-        diseaseCount++;
+function validate(s){
+  let ok=true;
+  if(s===1){
+    ['appearance','pulse','grimace','activity','respiration'].forEach(f=>{
+      if(!document.querySelector('input[name='+f+']:checked')){
+        ok=false;
+        const g=document.getElementById('grp_'+f);
+        g.style.outline='2px solid #ef4444';
+        setTimeout(()=>g.style.outline='',2500);
+      }
     });
-<<<<<<< Updated upstream
-=======
     if(!ok)alert('Please rate all 5 APGAR indicators before continuing.');
   }
   if(s===2){
@@ -529,53 +364,42 @@
   }
   return ok;
 }
->>>>>>> Stashed changes
 
-    function removeDisease(index) {
-        const block = document.getElementById(`disease-block-${index}`);
-        if (block) block.remove();
-    }
+function pickApgar(lbl,field,score){
+  lbl.closest('.apgar-opts').querySelectorAll('.apgar-opt').forEach(l=>l.className='apgar-opt');
+  lbl.classList.add('sel'+score);
+  apgarVals[field]=score;
+  updateScore();
+}
+function updateScore(){
+  const fields=['appearance','pulse','grimace','activity','respiration'];
+  const done=fields.filter(f=>apgarVals[f]!==undefined);
+  const total=fields.reduce((s,f)=>s+(apgarVals[f]||0),0);
+  const ring=document.getElementById('scoreRing'),num=document.getElementById('scoreNum');
+  const cat=document.getElementById('scoreCat'),desc=document.getElementById('scoreDesc');
+  num.textContent=done.length===5?total:'?';
+  let col,label,note;
+  if(done.length<5){col='#0ea5e9';label=done.length+'/5 indicators rated';note='Complete all 5 indicators for your total APGAR score';}
+  else if(total>=7){col='#22c55e';label='Normal — '+total+'/10';note='Baby is showing good signs of health at birth.';}
+  else if(total>=4){col='#f59e0b';label='Moderate concern — '+total+'/10';note='Baby may need some medical support or closer monitoring.';}
+  else{col='#ef4444';label='Low — '+total+'/10';note='Baby requires immediate medical attention and intervention.';}
+  ring.style.borderColor=col;num.style.color=col;cat.textContent=label;desc.textContent=note;
+}
 
-    function toggleOther(select, idx) {
-        const otherDiv = document.getElementById(`other_${idx}`);
-        if (otherDiv) {
-            otherDiv.style.display = (select.value === 'Other') ? 'block' : 'none';
-        }
-    }
+function setUnit(u){
+  document.getElementById('weight_unit').value=u;
+  ['g','kg','lb'].forEach(x=>document.getElementById('u_'+x).classList.toggle('active',x===u));
+  const hints={g:'Normal range: 2,500–4,000 g',kg:'Normal range: 2.5–4.0 kg',lb:'Normal range: 5.5–8.8 lb'};
+  const ph={g:'e.g. 3200',kg:'e.g. 3.2',lb:'e.g. 7.05'};
+  document.getElementById('whint').textContent=hints[u]+' · Click units to switch';
+  document.getElementById('birth_weight').placeholder=ph[u];
+}
 
-    // Basic client-side validation before submit
-    document.getElementById('risk-form').addEventListener('submit', function(e) {
-        let valid = true;
-        const requiredFields = ['appearance','pulse','grimace','activity','respiration',
-                                'birth_week','birth_weight','maternal_age'];
+function pickDel(lbl){
+  document.querySelectorAll('.del-card').forEach(c=>c.classList.remove('sel'));
+  lbl.classList.add('sel');lbl.querySelector('input').checked=true;
+}
 
-<<<<<<< Updated upstream
-        requiredFields.forEach(id => {
-            const el = document.getElementById(id);
-            const err = document.getElementById(id + '-error');
-            if (!el.value.trim()) {
-                err.style.display = 'block';
-                valid = false;
-            } else {
-                err.style.display = 'none';
-            }
-        });
-
-        // Birth week range
-        const week = parseFloat(document.getElementById('birth_week').value);
-        if (isNaN(week) || week < 20 || week > 45) {
-            document.getElementById('birth_week-error').style.display = 'block';
-            valid = false;
-        }
-
-        // Similar for weight & age (you can expand)
-
-        if (!valid) {
-            e.preventDefault();
-            alert('Please correct the highlighted fields.');
-        }
-    });
-=======
 function setGenetic(on){
   genOn=on;
   document.getElementById('togYes').classList.toggle('active',on);
@@ -652,7 +476,6 @@ function buildReview(){
   ];
   document.getElementById('rev-grid').innerHTML=items.map(i=>`<div class="rev-item"><div class="rl">${i.l}</div><div class="rv">${i.v}</div></div>`).join('');
 }
->>>>>>> Stashed changes
 </script>
 </body>
 </html>

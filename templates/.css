@@ -1,0 +1,42 @@
+.apgar-ring.good {
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.apgar-ring.moderate {
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.apgar-ring.poor {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.prob-bar-wrap {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.prob-bar-bg {
+    width: 100%;
+    height: 12px;
+    background-color: #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.prob-bar-fill {
+    height: 100%;
+    width: var(--prob-width, 0%);
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    border-radius: 8px;
+    transition: width 0.6s ease-in-out;
+}
+
+.prob-pct {
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
