@@ -248,11 +248,227 @@
     </div>
 </div>
 
+<<<<<<< Updated upstream
 <script>
     // Show/hide genetic diseases section
     const geneticYes = document.getElementById('genetic-yes');
     const geneticNo  = document.getElementById('genetic-no');
     const geneticSection = document.getElementById('genetic-section');
+=======
+<div class="main">
+  <div class="progress-outer">
+    <div class="progress-bar">
+      <div class="prog-step"><div class="prog-dot active" id="dot1">1</div><div class="prog-label active" id="lbl1">APGAR</div></div>
+      <div class="prog-line" id="line1"></div>
+      <div class="prog-step"><div class="prog-dot" id="dot2">2</div><div class="prog-label" id="lbl2">Birth Info</div></div>
+      <div class="prog-line" id="line2"></div>
+      <div class="prog-step"><div class="prog-dot" id="dot3">3</div><div class="prog-label" id="lbl3">Genetics</div></div>
+      <div class="prog-line" id="line3"></div>
+      <div class="prog-step"><div class="prog-dot" id="dot4">4</div><div class="prog-label" id="lbl4">Review</div></div>
+    </div>
+  </div>
+  <br>
+  <div class="disclaimer"><strong>⚠️ Important:</strong> This tool is for educational and informational purposes only. It does not replace professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for medical decisions.</div>
+
+  <form method="POST" id="mainForm" novalidate>
+
+    <!-- Step 1: APGAR -->
+    <div class="sec-card active" id="step1">
+      <div class="card-hd">
+        <div class="card-icon" style="background:rgba(14,165,233,.1)">👶</div>
+        <div><h2>APGAR Score Components</h2><p>Rate each of the 5 health indicators observed at birth — scored 0 (poor), 1 (moderate), or 2 (excellent)</p></div>
+      </div>
+      <div class="card-bd">
+        <div class="apgar-grid">
+
+          <div>
+            <div class="apgar-lbl">🎨 Appearance — Skin Color</div>
+            <div class="apgar-opts" id="grp_appearance">
+              <label class="apgar-opt" onclick="pickApgar(this,'appearance',0)"><input type="radio" name="appearance" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>Blue or pale all over</strong><span>Oxygen is not reaching the skin — poor circulation throughout body</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'appearance',1)"><input type="radio" name="appearance" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Pink body, blue hands/feet</strong><span>Body color looks good, but fingertips and toes are still slightly blue</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'appearance',2)"><input type="radio" name="appearance" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Fully pink throughout</strong><span>Excellent — healthy color from head to toe, great circulation</span></div></label>
+            </div>
+          </div>
+
+          <div>
+            <div class="apgar-lbl">❤️ Pulse — Heart Rate</div>
+            <div class="apgar-opts" id="grp_pulse">
+              <label class="apgar-opt" onclick="pickApgar(this,'pulse',0)"><input type="radio" name="pulse" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>No heartbeat detected</strong><span>Critical — heart is not beating. Immediate intervention required</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'pulse',1)"><input type="radio" name="pulse" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Slow — below 100 beats/min</strong><span>Heart is beating but too slowly — needs close monitoring</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'pulse',2)"><input type="radio" name="pulse" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong — 100+ beats/min</strong><span>Excellent — heart is beating at a healthy, vigorous rate</span></div></label>
+            </div>
+          </div>
+
+          <div>
+            <div class="apgar-lbl">😮 Grimace — Reflex Response</div>
+            <div class="apgar-opts" id="grp_grimace">
+              <label class="apgar-opt" onclick="pickApgar(this,'grimace',0)"><input type="radio" name="grimace" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>No response to stimulation</strong><span>Baby shows no reaction when stimulated — reflexes are absent</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'grimace',1)"><input type="radio" name="grimace" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Grimace only</strong><span>Some reflex activity present but the response is weak</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'grimace',2)"><input type="radio" name="grimace" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Cry, cough, or sneeze</strong><span>Excellent — baby responds strongly and vigorously to stimulation</span></div></label>
+            </div>
+          </div>
+
+          <div>
+            <div class="apgar-lbl">💪 Activity — Muscle Tone</div>
+            <div class="apgar-opts" id="grp_activity">
+              <label class="apgar-opt" onclick="pickApgar(this,'activity',0)"><input type="radio" name="activity" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>Limp — no movement at all</strong><span>Very low or absent muscle tone. Baby is not moving</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'activity',1)"><input type="radio" name="activity" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Some flexion of arms/legs</strong><span>Baby shows some movement but muscle strength is limited</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'activity',2)"><input type="radio" name="activity" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Active, vigorous movement</strong><span>Excellent — baby is actively moving with good, healthy muscle tone</span></div></label>
+            </div>
+          </div>
+
+          <div style="grid-column:1/-1">
+            <div class="apgar-lbl">🫁 Respiration — Breathing Effort</div>
+            <div class="apgar-opts" id="grp_respiration" style="flex-direction:row;flex-wrap:wrap">
+              <label class="apgar-opt" style="flex:1;min-width:200px" onclick="pickApgar(this,'respiration',0)"><input type="radio" name="respiration" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>Not breathing at all</strong><span>Critical — immediate help is required right away</span></div></label>
+              <label class="apgar-opt" style="flex:1;min-width:200px" onclick="pickApgar(this,'respiration',1)"><input type="radio" name="respiration" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Weak or irregular breathing</strong><span>Present but too weak or inconsistent — needs support</span></div></label>
+              <label class="apgar-opt" style="flex:1;min-width:200px" onclick="pickApgar(this,'respiration',2)"><input type="radio" name="respiration" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong, vigorous cry</strong><span>Excellent — breathing is healthy and lungs are working well</span></div></label>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="score-display">
+          <div class="score-ring" id="scoreRing">
+            <div class="sn" id="scoreNum">?</div>
+            <div class="sd">/10</div>
+          </div>
+          <div class="score-info">
+            <h3 id="scoreCat">Rate all 5 indicators above</h3>
+            <p id="scoreDesc">Your total APGAR score appears here as you make your selections</p>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <span></span>
+          <button type="button" class="btn btn-next" onclick="goNext(1)">Birth Information &#x2192;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Birth Info -->
+    <div class="sec-card" id="step2">
+      <div class="card-hd">
+        <div class="card-icon" style="background:rgba(99,102,241,.1)">📋</div>
+        <div><h2>Birth Information</h2><p>Gestational age, birth weight, mother's age, and delivery method</p></div>
+      </div>
+      <div class="card-bd">
+        <div class="irow">
+          <div class="fg">
+            <label class="fl">🗓️ Gestational Age (Weeks)</label>
+            <input type="number" step="0.5" name="birth_week" id="birth_week" class="fi" min="20" max="45" placeholder="e.g. 38.5" required>
+            <div class="hint">Normal full-term pregnancy: 37–42 weeks</div>
+            <div class="ferr" id="err_week">Please enter a valid week between 20 and 45.</div>
+          </div>
+          <div class="fg">
+            <label class="fl">👩 Mother's Age (Years)</label>
+            <input type="number" name="maternal_age" id="maternal_age" class="fi" min="12" max="60" placeholder="e.g. 28" required>
+            <div class="hint">Optimal childbearing age range: 22–35 years</div>
+            <div class="ferr" id="err_age">Please enter an age between 12 and 60.</div>
+          </div>
+        </div>
+        <div class="fg">
+          <label class="fl">👶 Child's Sex</label>
+          <select name="child_gender" id="child_gender" class="fsel" required>
+            <option value="">— select —</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="unknown">Not sure yet / Unknown</option>
+          </select>
+          <div class="hint">Needed for X-linked inheritance calculation.</div>
+          <div class="ferr" id="err_gender">Please select the child's sex.</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl">⚖️ Birth Weight</label>
+          <div class="wrow">
+            <div class="winput">
+              <input type="number" step="0.01" name="birth_weight" id="birth_weight" class="fi" min="0.1" placeholder="Enter weight..." required>
+            </div>
+            <div class="unit-tog">
+              <button type="button" class="ubtn active" id="u_g" onclick="setUnit('g')">g</button>
+              <button type="button" class="ubtn" id="u_kg" onclick="setUnit('kg')">kg</button>
+              <button type="button" class="ubtn" id="u_lb" onclick="setUnit('lb')">lb</button>
+            </div>
+          </div>
+          <input type="hidden" name="weight_unit" id="weight_unit" value="g">
+          <div class="hint" id="whint">Normal range: 2,500–4,000 g &nbsp;·&nbsp; Click g / kg / lb to switch units</div>
+          <div class="ferr" id="err_weight">Please enter a valid birth weight.</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl">🏥 Delivery Method</label>
+          <div class="del-cards">
+            <label class="del-card sel" onclick="pickDel(this)">
+              <input type="radio" name="delivery_comp" value="0" checked>
+              <div class="del-icon">🤱</div>
+              <strong>Normal Vaginal Delivery</strong>
+              <span>Natural birth through birth canal</span>
+            </label>
+            <label class="del-card" onclick="pickDel(this)">
+              <input type="radio" name="delivery_comp" value="1">
+              <div class="del-icon">🏨</div>
+              <strong>Cesarean Section (C-Section)</strong>
+              <span>Surgical delivery procedure</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <button type="button" class="btn btn-ghost" onclick="goPrev(2)">&#x2190; Back</button>
+          <button type="button" class="btn btn-next" onclick="goNext(2)">Genetic History &#x2192;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Genetics -->
+    <div class="sec-card" id="step3">
+      <div class="card-hd">
+        <div class="card-icon" style="background:rgba(34,197,94,.1)">🧬</div>
+        <div><h2>Inherited / Genetic Conditions</h2><p>Does your family have any known inherited conditions? This helps estimate genetic risk for the baby.</p></div>
+      </div>
+      <div class="card-bd">
+        <div class="fg">
+          <label class="fl">Does your family have any known inherited health conditions?</label>
+          <div class="gen-tog">
+            <button type="button" class="togbtn active" id="togNo" onclick="setGenetic(false)">&#x2715; None known</button>
+            <button type="button" class="togbtn" id="togYes" onclick="setGenetic(true)">&#x2713; Yes, add conditions</button>
+          </div>
+        </div>
+        <div id="gen-section" style="display:none">
+          <div class="dis-container" id="dis-container"></div>
+          <button type="button" class="add-btn" onclick="addDisease()">&#xFF0B; Add a condition</button>
+        </div>
+        <div class="nav-bar">
+          <button type="button" class="btn btn-ghost" onclick="goPrev(3)">&#x2190; Back</button>
+          <button type="button" class="btn btn-next" onclick="goNext(3)">Review &#x2192;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Review -->
+    <div class="sec-card" id="step4">
+      <div class="card-hd">
+        <div class="card-icon" style="background:rgba(34,197,94,.1)">&#x2705;</div>
+        <div><h2>Review &amp; Submit</h2><p>Confirm the information below before calculating the risk assessment</p></div>
+      </div>
+      <div class="card-bd">
+        <div class="review-grid" id="rev-grid"></div>
+        <div class="nav-bar">
+          <button type="button" class="btn btn-ghost" onclick="goPrev(4)">&#x2190; Edit</button>
+          <button type="submit" class="btn btn-sub">&#x1F50D; Calculate Risk Assessment</button>
+        </div>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+<script>
+    const INHERITANCE_MODES = {{ inheritance_modes | tojson }};
+    const COMMON_DISEASES = {{ common_diseases | tojson }};
+    let curStep=1, apgarVals={}, disCount=0, genOn=false;
+>>>>>>> Stashed changes
 
     function toggleGenetic() {
         geneticSection.classList.toggle('hidden', !geneticYes.checked);
@@ -297,6 +513,23 @@
         container.appendChild(entry);
         diseaseCount++;
     });
+<<<<<<< Updated upstream
+=======
+    if(!ok)alert('Please rate all 5 APGAR indicators before continuing.');
+  }
+  if(s===2){
+    const w=parseFloat(document.getElementById('birth_week').value);
+    const a=parseInt(document.getElementById('maternal_age').value);
+    const wt=parseFloat(document.getElementById('birth_weight').value);
+    const g=document.getElementById('child_gender').value;
+    if(isNaN(w)||w<20||w>45){showE('err_week','birth_week');ok=false;}else hideE('err_week','birth_week');
+    if(isNaN(a)||a<12||a>60){showE('err_age','maternal_age');ok=false;}else hideE('err_age','maternal_age');
+    if(isNaN(wt)||wt<=0){showE('err_weight','birth_weight');ok=false;}else hideE('err_weight','birth_weight');
+    if(!g){showE('err_gender','child_gender');ok=false;}else hideE('err_gender','child_gender');
+  }
+  return ok;
+}
+>>>>>>> Stashed changes
 
     function removeDisease(index) {
         const block = document.getElementById(`disease-block-${index}`);
@@ -316,6 +549,7 @@
         const requiredFields = ['appearance','pulse','grimace','activity','respiration',
                                 'birth_week','birth_weight','maternal_age'];
 
+<<<<<<< Updated upstream
         requiredFields.forEach(id => {
             const el = document.getElementById(id);
             const err = document.getElementById(id + '-error');
@@ -341,6 +575,84 @@
             alert('Please correct the highlighted fields.');
         }
     });
+=======
+function setGenetic(on){
+  genOn=on;
+  document.getElementById('togYes').classList.toggle('active',on);
+  document.getElementById('togNo').classList.toggle('active',!on);
+  document.getElementById('gen-section').style.display=on?'block':'none';
+  if(on && document.querySelectorAll('.dis-block').length===0) addDisease();
+  if(!on){
+    document.getElementById('dis-container').innerHTML='';
+    disCount=0;
+  }
+}
+
+function addDisease(){
+  const c=document.getElementById('dis-container'),idx=disCount++;
+  const mOpts=Object.entries(INHERITANCE_MODES)
+    .filter(([k,_])=>k!=='xlinked_mother_carrier')
+    .map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  const dOpts=COMMON_DISEASES.map(d=>`<option value="${d}">${d}</option>`).join('');
+  const el=document.createElement('div');
+  el.className='dis-block';el.id='db_'+idx;
+  el.innerHTML=`<div class="dis-hd"><h4>Condition #${idx+1}</h4><button type="button" class="rem-btn" onclick="removeD(${idx})">Remove</button></div>
+  <div class="dis-frow">
+    <div>
+      <label class="fl" style="font-size:12px">Condition name</label>
+      <select name="disease_${idx}" class="fsel" onchange="togOther(this,${idx})"><option value="">— select —</option>${dOpts}</select>
+      <div id="ow_${idx}" style="display:none;margin-top:8px"><input type="text" name="other_disease_${idx}" class="fi" style="font-size:13px;padding:9px 12px" placeholder="Type condition name..."></div>
+    </div>
+    <div>
+      <label class="fl" style="font-size:12px">How is this inherited?</label>
+      <select name="mode_${idx}" class="fsel" onchange="updHint(this,${idx});togXlinked(${idx},this.value)">${mOpts}</select>
+      <div class="mode-hint" id="mh_${idx}"></div>
+    </div>
+    <div id="xwrap_${idx}" style="display:none">
+      <label class="fl" style="font-size:12px">X-linked parent history</label>
+      <select name="xlinked_parent_${idx}" class="fsel" style="margin-bottom:8px">
+        <option value="mother">Mother side</option>
+        <option value="father">Father side</option>
+      </select>
+      <select name="xlinked_status_${idx}" class="fsel">
+        <option value="carrier">Carrier</option>
+        <option value="affected">Affected</option>
+      </select>
+      <div class="mode-hint">Used with child's sex to estimate X-linked inheritance.</div>
+    </div>
+  </div>`;
+  c.appendChild(el);
+  const modeSel = el.querySelector('select[name=mode_'+idx+']');
+  updHint(modeSel,idx);
+  togXlinked(idx, modeSel.value);
+}
+function removeD(i){const b=document.getElementById('db_'+i);if(b)b.remove();}
+function togOther(s,i){document.getElementById('ow_'+i).style.display=s.value==='Other'?'block':'none';}
+function updHint(s,i){const k=s.value,el=document.getElementById('mh_'+i);if(el&&INHERITANCE_MODES[k])el.textContent=INHERITANCE_MODES[k].explanation;else if(el)el.textContent='';}
+function togXlinked(i,mode){const el=document.getElementById('xwrap_'+i);if(el)el.style.display=mode==='xlinked'?'block':'none';}
+
+function buildReview(){
+  const fs=['appearance','pulse','grimace','activity','respiration'];
+  const t=fs.reduce((s,f)=>s+(apgarVals[f]||0),0);
+  const wk=document.getElementById('birth_week').value;
+  const wt=document.getElementById('birth_weight').value;
+  const un=document.getElementById('weight_unit').value;
+  const ag=document.getElementById('maternal_age').value;
+  const cg=document.getElementById('child_gender').value;
+  const dl=document.querySelector('input[name=delivery_comp]:checked')?.value;
+  const dc=document.querySelectorAll('.dis-block');
+  const items=[
+    {l:'👶 APGAR Score',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'—'},
+    {l:'🗓️ Gestational Age',v:wk?wk+' weeks':'—'},
+    {l:'⚖️ Birth Weight',v:wt?wt+' '+un:'—'},
+    {l:'👩 Mother\'s Age',v:ag?ag+' years':'—'},
+    {l:'👶 Child\'s Sex',v:cg?cg:'—'},
+    {l:'🏥 Delivery Method',v:dl==='0'?'Vaginal Delivery':dl==='1'?'C-Section':'—'},
+    {l:'🧬 Genetic Conditions',v:genOn&&dc.length?dc.length+' condition(s) added':'None'},
+  ];
+  document.getElementById('rev-grid').innerHTML=items.map(i=>`<div class="rev-item"><div class="rl">${i.l}</div><div class="rv">${i.v}</div></div>`).join('');
+}
+>>>>>>> Stashed changes
 </script>
 </body>
 </html>

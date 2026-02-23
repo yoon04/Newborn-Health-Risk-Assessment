@@ -25,10 +25,19 @@ def index():
         activity     = int(request.form['activity'])
         respiration  = int(request.form['respiration'])
 
+<<<<<<< Updated upstream
         # Other inputs
         birth_week   = float(request.form['birth_week'])
         birth_weight = float(request.form['birth_weight'])
         maternal_age = int(request.form['maternal_age'])
+=======
+        weight_val  = float(request.form['birth_weight'])
+        weight_unit = request.form.get('weight_unit', 'g')
+        birth_weight_g = convert_weight_to_grams(weight_val, weight_unit)
+
+        maternal_age  = int(request.form['maternal_age'])
+        child_gender  = request.form.get('child_gender', 'unknown')
+>>>>>>> Stashed changes
         delivery_comp = int(request.form['delivery_comp'])
 
         # Inherited diseases – dynamic fields
@@ -38,23 +47,39 @@ def index():
             disease = request.form[f'disease_{i}']
             if disease == 'Other':
                 disease = request.form.get(f'other_disease_{i}', 'Unknown')
+<<<<<<< Updated upstream
             mode = request.form.get(f'mode_{i}', 'complex')
             try:
                 carriers = int(request.form.get(f'carriers_{i}', 0))
             except ValueError:
                 carriers = 0
+=======
+            mode = request.form.get(f'mode_{i}', 'unknown')
+            xlinked_parent = request.form.get(f'xlinked_parent_{i}', 'mother')
+            xlinked_status = request.form.get(f'xlinked_status_{i}', 'carrier')
+>>>>>>> Stashed changes
             if disease.strip():
                 inherited_diseases.append({
                     'disease': disease,
                     'mode': mode,
+<<<<<<< Updated upstream
                     'carriers': carriers
+=======
+                    'xlinked_parent': xlinked_parent,
+                    'xlinked_status': xlinked_status,
+>>>>>>> Stashed changes
                 })
             i += 1
 
         results = assess_risk(
             appearance, pulse, grimace, activity, respiration,
+<<<<<<< Updated upstream
             birth_week, birth_weight, maternal_age, delivery_comp,
             inherited_diseases
+=======
+            birth_week, birth_weight_g, maternal_age, delivery_comp,
+            inherited_diseases, child_gender
+>>>>>>> Stashed changes
         )
 
         return render_template('results.html', results=results)
