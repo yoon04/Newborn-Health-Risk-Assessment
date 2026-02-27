@@ -9,8 +9,7 @@ if not os.path.exists('static'):
 
 COMMON_DISEASES = [
     'Diabetes', 'Heart Disease', 'Hemoglobin E', 'Congenital Deafness',
-    'Muscular Dystrophy', 'Cystic Fibrosis', 'Sickle Cell Anemia',
-    'Hemophilia', 'Color Blindness', 'Down Syndrome', 'Phenylketonuria (PKU)', 'Other'
+    'Muscular Dystrophy', 'Color Blindness', 'Other'
 ]
 
 @app.route('/', methods=['GET', 'POST'])
@@ -28,6 +27,7 @@ def index():
         birth_weight_g = convert_weight_to_grams(weight_val, weight_unit)
 
         maternal_age  = int(request.form['maternal_age'])
+        child_gender  = request.form.get('child_gender', 'unknown')
         delivery_comp = int(request.form['delivery_comp'])
 
         inherited_diseases = []
@@ -37,14 +37,21 @@ def index():
             if disease == 'Other':
                 disease = request.form.get(f'other_disease_{i}', 'Unknown')
             mode = request.form.get(f'mode_{i}', 'unknown')
+            xlinked_parent = request.form.get(f'xlinked_parent_{i}', 'mother')
+            xlinked_status = request.form.get(f'xlinked_status_{i}', 'carrier')
             if disease.strip():
-                inherited_diseases.append({'disease': disease, 'mode': mode})
+                inherited_diseases.append({
+                    'disease': disease,
+                    'mode': mode,
+                    'xlinked_parent': xlinked_parent,
+                    'xlinked_status': xlinked_status,
+                })
             i += 1
 
         results = assess_risk(
             appearance, pulse, grimace, activity, respiration,
             birth_week, birth_weight_g, maternal_age, delivery_comp,
-            inherited_diseases
+            inherited_diseases, child_gender
         )
         results['weight_display'] = f"{weight_val} {weight_unit} ({birth_weight_g:.0f}g)"
         return render_template('results.html', results=results)

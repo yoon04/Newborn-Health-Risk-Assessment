@@ -222,6 +222,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
             <div class="ferr" id="err_age">Please enter an age between 12 and 60.</div>
           </div>
         </div>
+        <div class="fg">
+          <label class="fl">👶 Child's Sex</label>
+          <select name="child_gender" id="child_gender" class="fsel" required>
+            <option value="">— select —</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="unknown">Not sure yet / Unknown</option>
+          </select>
+          <div class="hint">Needed for X-linked inheritance calculation.</div>
+          <div class="ferr" id="err_gender">Please select the child's sex.</div>
+        </div>
 
         <div class="fg">
           <label class="fl">⚖️ Birth Weight</label>
@@ -308,11 +319,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   </form>
 </div>
 
-<script src="{{ url_for('static', filename='js/script.js') }}"></script>
-
 <script>
-    // const INHERITANCE_MODES = {{ inheritance_modes | tojson }};
-    // const COMMON_DISEASES = {{ common_diseases | tojson }};
+    const INHERITANCE_MODES = {{ inheritance_modes | tojson }};
+    const COMMON_DISEASES = {{ common_diseases | tojson }};
     let curStep=1, apgarVals={}, disCount=0, genOn=false;
 
 function refreshProg(){
@@ -347,9 +356,11 @@ function validate(s){
     const w=parseFloat(document.getElementById('birth_week').value);
     const a=parseInt(document.getElementById('maternal_age').value);
     const wt=parseFloat(document.getElementById('birth_weight').value);
+    const g=document.getElementById('child_gender').value;
     if(isNaN(w)||w<20||w>45){showE('err_week','birth_week');ok=false;}else hideE('err_week','birth_week');
     if(isNaN(a)||a<12||a>60){showE('err_age','maternal_age');ok=false;}else hideE('err_age','maternal_age');
     if(isNaN(wt)||wt<=0){showE('err_weight','birth_weight');ok=false;}else hideE('err_weight','birth_weight');
+    if(!g){showE('err_gender','child_gender');ok=false;}else hideE('err_gender','child_gender');
   }
   return ok;
 }
@@ -394,11 +405,15 @@ function setGenetic(on){
   document.getElementById('togYes').classList.toggle('active',on);
   document.getElementById('togNo').classList.toggle('active',!on);
   document.getElementById('gen-section').style.display=on?'block':'none';
+  if(on && document.querySelectorAll('.dis-block').length===0) addDisease();
+  if(!on){
+    document.getElementById('dis-container').innerHTML='';
+    disCount=0;
+  }
 }
 
 function addDisease(){
   const c=document.getElementById('dis-container'),idx=disCount++;
-  const mOpts=Object.entries(INHERITANCE_MODES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
   const dOpts=COMMON_DISEASES.map(d=>`<option value="${d}">${d}</option>`).join('');
   const el=document.createElement('div');
   el.className='dis-block';el.id='db_'+idx;
@@ -407,20 +422,71 @@ function addDisease(){
     <div>
       <label class="fl" style="font-size:12px">Condition name</label>
       <select name="disease_${idx}" class="fsel" onchange="togOther(this,${idx})"><option value="">— select —</option>${dOpts}</select>
-      <div id="ow_${idx}" style="display:none;margin-top:8px"><input type="text" name="other_disease_${idx}" class="fi" style="font-size:13px;padding:9px 12px" placeholder="Type condition name..."></div>
+      <div id="ow_${idx}" style="display:none;margin-top:8px"><input type="text" name="other_disease_${idx}" class="fi" style="font-size:13px;padding:9px 12px" placeholder="Type condition name..." oninput="setModeFromOther(${idx}, this.value)"></div>
     </div>
     <div>
       <label class="fl" style="font-size:12px">How is this inherited?</label>
-      <select name="mode_${idx}" class="fsel" onchange="updHint(this,${idx})">${mOpts}</select>
+      <select name="mode_${idx}" class="fsel" onchange="updHint(this,${idx});togXlinked(${idx},this.value)"></select>
       <div class="mode-hint" id="mh_${idx}"></div>
+    </div>
+    <div id="xwrap_${idx}" style="display:none">
+      <label class="fl" style="font-size:12px">X-linked parent history</label>
+      <select name="xlinked_parent_${idx}" class="fsel" style="margin-bottom:8px">
+        <option value="mother">Mother side</option>
+        <option value="father">Father side</option>
+      </select>
+      <select name="xlinked_status_${idx}" class="fsel">
+        <option value="carrier">Carrier</option>
+        <option value="affected">Affected</option>
+      </select>
+      <div class="mode-hint">Used with child's sex to estimate X-linked inheritance.</div>
     </div>
   </div>`;
   c.appendChild(el);
-  updHint(el.querySelector('select[name=mode_'+idx+']'),idx);
+  applyDiseaseRules(idx, '');
 }
 function removeD(i){const b=document.getElementById('db_'+i);if(b)b.remove();}
-function togOther(s,i){document.getElementById('ow_'+i).style.display=s.value==='Other'?'block':'none';}
+function normalizeDiseaseName(v){
+  return (v||'').toLowerCase().replace(/[^a-z]/g,'');
+}
+function diseaseCategory(v){
+  const k=normalizeDiseaseName(v);
+  if(['hemophilia','colorblindness','musculardystrophy'].includes(k)) return 'xlinked';
+  if(['diabetes','heartdisease','heartdiseases'].includes(k)) return 'complex';
+  return 'other';
+}
+function renderModeOptions(i,category,defaultMode=''){
+  const modeSel=document.querySelector('select[name=mode_'+i+']');
+  if(!modeSel) return;
+  const opts=Object.entries(INHERITANCE_MODES)
+    .filter(([k,_])=>k!=='xlinked_mother_carrier')
+    .filter(([k,_])=>!(category==='other' && (k==='xlinked' || k==='complex')))
+    .map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  modeSel.innerHTML=`<option value="">— select —</option>${opts}`;
+  modeSel.value=defaultMode||'';
+  if(modeSel.value!==(defaultMode||'')) modeSel.value='';
+  updHint(modeSel,i);
+  togXlinked(i,modeSel.value);
+}
+function applyDiseaseRules(i,diseaseName){
+  const category=diseaseCategory(diseaseName);
+  const defaultMode=category==='xlinked'?'xlinked':(category==='complex'?'complex':'');
+  renderModeOptions(i,category,defaultMode);
+}
+function setModeFromOther(i,v){applyDiseaseRules(i,v);}
+function togOther(s,i){
+  const isOther=s.value==='Other';
+  const wrap=document.getElementById('ow_'+i);
+  wrap.style.display=isOther?'block':'none';
+  if(isOther){
+    const other=document.querySelector('input[name=other_disease_'+i+']');
+    applyDiseaseRules(i,other?other.value:'');
+  }else{
+    applyDiseaseRules(i,s.value);
+  }
+}
 function updHint(s,i){const k=s.value,el=document.getElementById('mh_'+i);if(el&&INHERITANCE_MODES[k])el.textContent=INHERITANCE_MODES[k].explanation;else if(el)el.textContent='';}
+function togXlinked(i,mode){const el=document.getElementById('xwrap_'+i);if(el)el.style.display=mode==='xlinked'?'block':'none';}
 
 function buildReview(){
   const fs=['appearance','pulse','grimace','activity','respiration'];
@@ -429,6 +495,7 @@ function buildReview(){
   const wt=document.getElementById('birth_weight').value;
   const un=document.getElementById('weight_unit').value;
   const ag=document.getElementById('maternal_age').value;
+  const cg=document.getElementById('child_gender').value;
   const dl=document.querySelector('input[name=delivery_comp]:checked')?.value;
   const dc=document.querySelectorAll('.dis-block');
   const items=[
@@ -436,6 +503,7 @@ function buildReview(){
     {l:'🗓️ Gestational Age',v:wk?wk+' weeks':'—'},
     {l:'⚖️ Birth Weight',v:wt?wt+' '+un:'—'},
     {l:'👩 Mother\'s Age',v:ag?ag+' years':'—'},
+    {l:'👶 Child\'s Sex',v:cg?cg:'—'},
     {l:'🏥 Delivery Method',v:dl==='0'?'Vaginal Delivery':dl==='1'?'C-Section':'—'},
     {l:'🧬 Genetic Conditions',v:genOn&&dc.length?dc.length+' condition(s) added':'None'},
   ];

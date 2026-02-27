@@ -130,59 +130,208 @@ def fuzzify_delivery_comp(dc):
     }
 
 INHERITANCE_MODES = {
-    'dominant_one_parent': {
-        'label': 'One parent has the condition (dominant gene)',
-        'prob': 0.50,
-        'explanation': '50% chance — with one parent carrying a dominant gene, about half of children inherit it.',
-    },
     'dominant_both_parents': {
-        'label': 'Both parents have the condition (dominant gene)',
-        'prob': 0.75,
-        'explanation': '75% chance — with both parents carrying dominant genes, the risk is very high.',
+        'label': 'Dominant: both parents have the condition',
+        'base_prob': 0.75,
+        'parent_signal': 0.95,
+        'grandparent_signal': 0.0,
+        'explanation': 'Both parents are affected by a dominant condition, so inheritance risk is high.',
     },
-    'carrier_both': {
-        'label': 'Both parents are silent carriers (recessive gene)',
-        'prob': 0.25,
-        'explanation': '25% chance — this is the classic recessive pattern; the baby needs two copies to be affected.',
+    'dominant_one_parent': {
+        'label': 'Dominant: only one parent has the condition',
+        'base_prob': 0.50,
+        'parent_signal': 0.7,
+        'grandparent_signal': 0.0,
+        'explanation': 'One affected parent with dominant inheritance usually gives around a 50% risk.',
     },
-    'carrier_one': {
-        'label': 'Only one parent is a silent carrier (recessive gene)',
-        'prob': 0.00,
-        'explanation': 'Very low direct risk — the baby would likely be a carrier only, not affected.',
+    'dominant_none_parents_grandparent_yes': {
+        'label': 'Dominant: parents unaffected, but grandparent had it',
+        'base_prob': 0.20,
+        'parent_signal': 0.2,
+        'grandparent_signal': 0.95,
+        'explanation': 'No affected parent lowers direct risk, but grandparent history keeps some inherited risk.',
+    },
+    'recessive_both_parents_carriers': {
+        'label': 'Recessive: both parents are carriers',
+        'base_prob': 0.25,
+        'parent_signal': 0.6,
+        'grandparent_signal': 0.0,
+        'explanation': 'Classic recessive pattern: if both parents are carriers, risk is about 25%.',
+    },
+    'recessive_one_parent_carrier': {
+        'label': 'Recessive: only one parent is a carrier',
+        'base_prob': 0.03,
+        'parent_signal': 0.3,
+        'grandparent_signal': 0.0,
+        'explanation': 'One carrier parent alone usually means very low chance of an affected baby.',
+    },
+    'recessive_none_parents_grandparent_yes': {
+        'label': 'Recessive: parents unaffected, but grandparent had it',
+        'base_prob': 0.10,
+        'parent_signal': 0.25,
+        'grandparent_signal': 0.95,
+        'explanation': 'Grandparent history suggests possible carrier status in the family line.',
+    },
+    'xlinked': {
+        'label': 'X-linked: use parent status + child gender',
+        'base_prob': 0.25,
+        'parent_signal': 0.7,
+        'grandparent_signal': 0.0,
+        'explanation': 'X-linked risk is adjusted using which parent has the condition and whether they are carrier or affected.',
     },
     'xlinked_mother_carrier': {
-        'label': 'Mother carries an X-linked gene (e.g. hemophilia, color blindness)',
-        'prob': 0.25,
-        'explanation': '25% overall chance; up to 50% for male children specifically.',
+        'label': 'X-linked (legacy): mother is a carrier',
+        'base_prob': 0.50,
+        'parent_signal': 0.7,
+        'grandparent_signal': 0.0,
+        'explanation': 'Legacy mode kept for compatibility. Prefer the new X-linked option with parent and status fields.',
     },
     'complex': {
-        'label': 'Lifestyle/complex condition (e.g. diabetes, heart disease)',
-        'prob': 0.10,
-        'explanation': '~10% elevated risk — multiple genes and lifestyle factors combine.',
+        'label': 'Complex/multifactorial (e.g. diabetes, heart disease)',
+        'base_prob': 0.10,
+        'parent_signal': 0.3,
+        'grandparent_signal': 0.3,
+        'explanation': 'Complex diseases involve many genes and environment, so risk is estimated conservatively.',
     },
     'unknown': {
-        'label': "I'm not sure / I don't know",
-        'prob': 0.10,
-        'explanation': 'Default estimate applied. A genetic counselor can give a precise answer.',
+        'label': 'Not sure / unknown pattern',
+        'base_prob': 0.10,
+        'parent_signal': 0.2,
+        'grandparent_signal': 0.2,
+        'explanation': 'Unknown inheritance pattern uses a cautious default estimate.',
     },
 }
+def fuzzify_genetic_base(base_prob):
+    return {
+        'low': trapezoidal_mf(base_prob, 0.0, 0.0, 0.10, 0.30),
+        'moderate': trapezoidal_mf(base_prob, 0.15, 0.30, 0.50, 0.70),
+        'high': trapezoidal_mf(base_prob, 0.55, 0.70, 1.0, 1.0),
+    }
+def fuzzify_genetic_signal(signal):
+    return {
+        'low': trapezoidal_mf(signal, 0.0, 0.0, 0.20, 0.45),
+        'moderate': trapezoidal_mf(signal, 0.25, 0.45, 0.60, 0.80),
+        'high': trapezoidal_mf(signal, 0.60, 0.80, 1.0, 1.0),
+    }
+def apply_genetic_rules(base_prob, parent_signal, grandparent_signal):
+    base = fuzzify_genetic_base(base_prob)
+    parent = fuzzify_genetic_signal(parent_signal)
+    gp = fuzzify_genetic_signal(grandparent_signal)
+    high = max(
+        min(base['high'], parent['high']),
+        min(base['moderate'], parent['high']),
+        min(base['moderate'], parent['moderate'], gp['high']),
+        min(base['high'], gp['moderate']),
+    )
+    moderate = max(
+        min(base['moderate'], parent['moderate']),
+        min(base['low'], parent['high']),
+        min(base['moderate'], gp['moderate']),
+        min(base['low'], parent['moderate'], gp['high']),
+    )
+    low = max(
+        min(base['low'], parent['low']),
+        min(base['low'], gp['low']),
+        min(base['moderate'], parent['low'], gp['low']),
+    )
+    return {'low': low, 'moderate': moderate, 'high': high}
+def defuzzify_genetic_risk(levels, base_prob):
+    strength = levels['low'] + levels['moderate'] + levels['high']
+    if strength <= 0:
+        return base_prob
 
-def estimate_inherited_prob(diseases):
+    fuzzy_estimate = (
+        levels['low'] * 0.12 +
+        levels['moderate'] * 0.35 +
+        levels['high'] * 0.75
+    ) / strength
+    return (0.65 * base_prob) + (0.35 * fuzzy_estimate)
+
+def normalize_gender(gender):
+    g = (gender or '').strip().lower()
+    if g in ('male', 'm'):
+        return 'male'
+    if g in ('female', 'f'):
+        return 'female'
+    return 'unknown'
+
+def xlinked_inheritance_profile(child_gender, parent, status):
+    g = normalize_gender(child_gender)
+    p = (parent or 'mother').strip().lower()
+    s = (status or 'carrier').strip().lower()
+
+    # Probability here represents inheriting the X-linked mutation.
+    if p == 'mother':
+        if s == 'affected':
+            base_prob = 1.0
+            reason = 'Mother is affected, so she passes an affected X chromosome to all children.'
+            parent_signal = 1.0
+        else:
+            base_prob = 0.5
+            reason = 'Mother is a carrier, so each child has about a 50% chance to inherit the mutation.'
+            parent_signal = 0.7
+    else:
+        if s == 'carrier':
+            base_prob = 0.5 if g == 'unknown' else (1.0 if g == 'female' else 0.0)
+            reason = 'Father cannot be a typical carrier in X-linked recessive patterns; treated as affected for inheritance probability.'
+            parent_signal = 0.75
+        else:
+            base_prob = 0.5 if g == 'unknown' else (1.0 if g == 'female' else 0.0)
+            reason = 'Affected father passes his X chromosome to daughters and Y chromosome to sons.'
+            parent_signal = 0.75
+
+    gender_note = {
+        'male': 'Child gender is male, so paternal X transmission is not possible.',
+        'female': 'Child gender is female, so paternal X transmission applies.',
+        'unknown': 'Child gender is unknown, so male/female outcomes are averaged.',
+    }[g]
+    return base_prob, parent_signal, reason, gender_note
+
+def estimate_inherited_prob(diseases, child_gender='unknown'):
     probs_list = []
     explanations = []
     for d in diseases:
         mode_key = d.get('mode', 'unknown')
         info = INHERITANCE_MODES.get(mode_key, INHERITANCE_MODES['unknown'])
-        base_prob = info['prob']
-        fuzzy_prob = triangular_mf(base_prob, 0, 0.5, 1)
+        base_prob = info['base_prob']
+        parent_signal = info.get('parent_signal', 0.2)
+        gp_signal = info.get('grandparent_signal', 0.2)
+        mode_explanation = info['explanation']
+
+        if mode_key in ('xlinked', 'xlinked_mother_carrier'):
+            x_parent = d.get('xlinked_parent', 'mother')
+            x_status = d.get('xlinked_status', 'carrier')
+            base_prob, parent_signal, x_reason, gender_note = xlinked_inheritance_profile(
+                child_gender,
+                x_parent,
+                x_status,
+            )
+            gp_signal = 0.0
+            mode_explanation = (
+                f"{x_reason} Parent selected: {x_parent}. Parent status: {x_status}. {gender_note}"
+            )
+
+        fuzzy_levels = apply_genetic_rules(
+            base_prob,
+            parent_signal,
+            gp_signal,
+        )
+        fuzzy_prob = defuzzify_genetic_risk(fuzzy_levels, base_prob)
         probs_list.append({
             'disease': d['disease'],
             'base_prob': base_prob,
             'fuzzy_prob': fuzzy_prob,
-            'expl': f"{d['disease']}: {info['explanation']}",
+            'expl': (
+                f"{d['disease']}: {mode_explanation} "
+                f"Base estimate {base_prob*100:.0f}% adjusted by fuzzy family-history rules "
+                f"to {fuzzy_prob*100:.1f}%."
+            ),
             'mode_label': info['label'],
         })
-        explanations.append(f"{d['disease']}: {info['explanation']}")
+        explanations.append(
+            f"{d['disease']}: {mode_explanation} "
+            f"(base {base_prob*100:.0f}%, fuzzy-adjusted {fuzzy_prob*100:.1f}%)."
+        )
     explanation = "; ".join(explanations) if explanations else "No inherited diseases noted."
     return probs_list, explanation
 
@@ -359,7 +508,8 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
     return centroid, plots
 
 def assess_risk(appearance, pulse, grimace, activity, respiration,
-                birth_week, birth_weight_g, maternal_age, delivery_comp, inherited_diseases):
+                birth_week, birth_weight_g, maternal_age, delivery_comp, inherited_diseases,
+                child_gender='unknown'):
     apgar_score, apgar_breakdown, apgar_category, apgar_severity, component_detail = \
         calculate_apgar(appearance, pulse, grimace, activity, respiration)
 
@@ -371,7 +521,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'delivery_comp': fuzzify_delivery_comp(delivery_comp),
     }
     risk_levels = apply_rules(fuzzy_inputs)
-    inherited_probs_list, inherited_explanation = estimate_inherited_prob(inherited_diseases)
+    inherited_probs_list, inherited_explanation = estimate_inherited_prob(inherited_diseases, child_gender)
     inherited_prob = np.mean([p['fuzzy_prob'] for p in inherited_probs_list]) if inherited_probs_list else 0.0
 
     overall_risk_prob, plot_paths = generate_visualizations(
@@ -380,7 +530,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         inherited_probs_list
     )
 
-    total_risk = (overall_risk_prob + inherited_prob * 100) / 2
+    total_risk = 0.7 * overall_risk_prob + 0.3 * inherited_prob * 100
 
     if total_risk < 30:
         risk_level, risk_color = "Low", "low"
@@ -395,7 +545,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     delivery_type = "Normal Vaginal Delivery" if delivery_comp == 0 else "Cesarean Section"
     conclusion = (f"{risk_level} health risk. {apgar_breakdown}. "
                   f"Birth at {birth_week}w, weight {birth_weight_g:.0f}g, "
-                  f"mother age {maternal_age}, delivery: {delivery_type}. "
+                  f"mother age {maternal_age}, child gender: {normalize_gender(child_gender)}, delivery: {delivery_type}. "
                   f"Birth-factor risk: {overall_risk_prob:.1f}%. "
                   f"Inherited risk: {inherited_prob*100:.1f}%. "
                   f"Total: {total_risk:.1f}%. {recommendation}")
@@ -419,5 +569,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'birth_week': birth_week,
         'birth_weight_g': birth_weight_g,
         'maternal_age': maternal_age,
+        'child_gender': normalize_gender(child_gender),
         'delivery_type': delivery_type,
     }
+
