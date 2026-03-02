@@ -27,7 +27,7 @@ def index():
         birth_weight_g = convert_weight_to_grams(weight_val, weight_unit)
 
         maternal_age  = int(request.form['maternal_age'])
-        child_gender  = request.form.get('child_gender', 'unknown')
+        child_gender  = request.form['child_gender'].strip().lower()
         delivery_comp = int(request.form['delivery_comp'])
 
         inherited_diseases = []

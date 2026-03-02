@@ -227,15 +227,14 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
           </div>
         </div>
         <div class="fg">
-          <label class="fl">Child's Sex</label>
+          <label class="fl">Child's Gender</label>
           <select name="child_gender" id="child_gender" class="fsel" required>
             <option value="">- select -</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
-            <option value="unknown">Not sure yet / Unknown</option>
           </select>
-          <div class="hint">Needed for X-linked inheritance calculation.</div>
-          <div class="ferr" id="err_gender">Please select the child's sex.</div>
+          <div class="hint">Required for X-linked inheritance calculation.</div>
+          <div class="ferr" id="err_gender">Please select the child's gender.</div>
         </div>
 
         <div class="fg">
@@ -456,7 +455,7 @@ function addDisease(){
         <option value="carrier">Carrier</option>
         <option value="affected">Affected</option>
       </select>
-      <div class="mode-hint">Used with child's sex to estimate X-linked inheritance.</div>
+      <div class="mode-hint">Used with child's gender to estimate X-linked inheritance.</div>
     </div>
   </div>`;
   c.appendChild(el);
@@ -556,7 +555,7 @@ function buildReview(){
     {l:'Gestational Age',v:wk?wk+' weeks':'-'},
     {l:'Birth Weight',v:wt?wt+' '+un:'-'},
     {l:'Mother\'s Age',v:ag?ag+' years':'-'},
-    {l:'Child\'s Sex',v:cg?cg:'-'},
+    {l:'Child\'s Gender',v:cg?cg:'-'},
     {l:'Delivery Method',v:dl==='0'?'Vaginal Delivery':dl==='1'?'C-Section':'-'},
     {l:'Genetic Conditions',v:genOn&&dc.length?dc.length+' condition(s) added':'None'},
   ];

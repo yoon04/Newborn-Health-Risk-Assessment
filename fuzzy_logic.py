@@ -242,8 +242,8 @@ MODE_SIMPLE_LABELS = {
     'recessive_both_parents_carriers': 'Family pattern: both parents carry it',
     'recessive_one_parent_carrier': 'Family pattern: one parent carries it',
     'recessive_none_parents_grandparent_yes': 'Family pattern: possible from grandparent side',
-    'xlinked': 'Family pattern: linked to parent side and child sex',
-    'xlinked_mother_carrier': 'Family pattern: linked to parent side and child sex',
+    'xlinked': 'Family pattern: linked to parent side and child gender',
+    'xlinked_mother_carrier': 'Family pattern: linked to parent side and child gender',
     'complex': 'Family pattern: mixed family and lifestyle factors',
     'unknown': 'Family pattern: not clearly known',
 }
@@ -295,9 +295,7 @@ def xlinked_simple_reason(child_gender, parent, status):
 
     if g == 'male':
         return 'This was marked on the father side, and for a boy this path usually lowers the chance.'
-    if g == 'female':
-        return 'This was marked on the father side, and for a girl this path can raise the chance.'
-    return 'This was marked on the father side, and child sex is unknown, so the estimate is averaged.'
+    return 'This was marked on the father side, and for a girl this path can raise the chance.'
 
 
 def fuzzify_genetic_base(base_prob):
@@ -352,7 +350,7 @@ def normalize_gender(gender):
         return 'male'
     if g in ('female', 'f'):
         return 'female'
-    return 'unknown'
+    raise ValueError("child_gender must be 'male' or 'female'")
 
 def xlinked_inheritance_profile(child_gender, parent, status):
     g = normalize_gender(child_gender)
@@ -371,22 +369,21 @@ def xlinked_inheritance_profile(child_gender, parent, status):
             parent_signal = 0.7
     else:
         if s == 'carrier':
-            base_prob = 0.5 if g == 'unknown' else (1.0 if g == 'female' else 0.0)
+            base_prob = 1.0 if g == 'female' else 0.0
             reason = 'Father cannot be a typical carrier in X-linked recessive patterns; treated as affected for inheritance probability.'
             parent_signal = 0.75
         else:
-            base_prob = 0.5 if g == 'unknown' else (1.0 if g == 'female' else 0.0)
+            base_prob = 1.0 if g == 'female' else 0.0
             reason = 'Affected father passes his X chromosome to daughters and Y chromosome to sons.'
             parent_signal = 0.75
 
     gender_note = {
         'male': 'Child gender is male, so paternal X transmission is not possible.',
         'female': 'Child gender is female, so paternal X transmission applies.',
-        'unknown': 'Child gender is unknown, so male/female outcomes are averaged.',
     }[g]
     return base_prob, parent_signal, reason, gender_note
 
-def estimate_inherited_prob(diseases, child_gender='unknown'):
+def estimate_inherited_prob(diseases, child_gender):
     probs_list = []
     explanations = []
     for d in diseases:
@@ -622,7 +619,8 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
 
 def assess_risk(appearance, pulse, grimace, activity, respiration,
                 birth_week, birth_weight_g, maternal_age, delivery_comp, inherited_diseases,
-                child_gender='unknown'):
+                child_gender):
+    normalized_gender = normalize_gender(child_gender)
     apgar_score, apgar_breakdown, apgar_category, apgar_severity, component_detail = \
         calculate_apgar(appearance, pulse, grimace, activity, respiration)
 
@@ -634,7 +632,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'delivery_comp': fuzzify_delivery_comp(delivery_comp),
     }
     risk_levels = apply_rules(fuzzy_inputs)
-    inherited_probs_list, inherited_explanation = estimate_inherited_prob(inherited_diseases, child_gender)
+    inherited_probs_list, inherited_explanation = estimate_inherited_prob(inherited_diseases, normalized_gender)
     inherited_prob = np.mean([p['fuzzy_prob'] for p in inherited_probs_list]) if inherited_probs_list else 0.0
 
     overall_risk_prob, plot_paths = generate_visualizations(
@@ -658,7 +656,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     delivery_type = "Normal Vaginal Delivery" if delivery_comp == 0 else "Cesarean Section"
     conclusion = (f"{risk_level} health risk. {apgar_breakdown}. "
                   f"Birth at {birth_week}w, weight {birth_weight_g:.0f}g, "
-                  f"mother age {maternal_age}, child gender: {normalize_gender(child_gender)}, delivery: {delivery_type}. "
+                  f"mother age {maternal_age}, child gender: {normalized_gender}, delivery: {delivery_type}. "
                   f"Birth-factor risk: {overall_risk_prob:.1f}%. "
                   f"Inherited risk: {inherited_prob*100:.1f}%. "
                   f"Total: {total_risk:.1f}%. {recommendation}")
@@ -682,7 +680,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'birth_week': birth_week,
         'birth_weight_g': birth_weight_g,
         'maternal_age': maternal_age,
-        'child_gender': normalize_gender(child_gender),
+        'child_gender': normalized_gender,
         'delivery_type': delivery_type,
     }
 

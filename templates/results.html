@@ -59,7 +59,16 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .apgar-ring{width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:3px solid;flex-shrink:0}
 .apgar-ring .an{font-size:28px;font-weight:700;line-height:1}
 .apgar-ring .ad{font-size:11px;color:var(--muted)}
+.apgar-ring.good{border-color:var(--green);background:rgba(22,163,74,.10)}
+.apgar-ring.good .an{color:var(--green)}
+.apgar-ring.moderate{border-color:var(--yellow);background:rgba(217,119,6,.12)}
+.apgar-ring.moderate .an{color:var(--yellow)}
+.apgar-ring.critical{border-color:var(--red);background:rgba(220,38,38,.10)}
+.apgar-ring.critical .an{color:var(--red)}
 .apgar-info h3{font-size:17px;font-weight:600;color:#1f2937;margin-bottom:4px}
+.apgar-info h3.good{color:var(--green)}
+.apgar-info h3.moderate{color:var(--yellow)}
+.apgar-info h3.critical{color:var(--red)}
 .apgar-info p{font-size:13px;color:var(--muted);line-height:1.6}
 .apgar-comps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .comp-card{background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:13px;text-align:center}
@@ -77,6 +86,10 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .chart-full{margin-top:20px}
 .chart-full h4{font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:10px}
 .chart-full img{width:100%;border-radius:10px;border:1px solid var(--border);background:#fff}
+.graph-help{margin-top:14px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.graph-help-grid{display:grid;grid-template-columns:170px 1fr;gap:8px 12px}
+.graph-help-k{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#64748b}
+.graph-help-v{font-size:12.5px;color:#475569;line-height:1.55}
 
 /* Genetic section */
 .genetic-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:24px;box-shadow:var(--shadow)}
@@ -120,7 +133,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .back-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;font-size:13.5px;font-weight:600;transition:all .2s;margin-top:10px}
 .back-btn:hover{border-color:var(--accent);color:var(--accent)}
 @media(max-width:840px){.birth-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.stats-row{grid-template-columns:1fr 1fr}.apgar-comps{grid-template-columns:1fr 1fr}.birth-grid{grid-template-columns:1fr}.score-layout{flex-direction:column;align-items:center}.score-main{width:100%}.genetic-line{grid-template-columns:1fr}}
+@media(max-width:560px){.stats-row{grid-template-columns:1fr 1fr}.apgar-comps{grid-template-columns:1fr 1fr}.birth-grid{grid-template-columns:1fr}.score-layout{flex-direction:column;align-items:center}.score-main{width:100%}.genetic-line{grid-template-columns:1fr}.graph-help-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -141,7 +154,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
         <div class="ad">/10</div>
       </div>
       <div class="apgar-info">
-        <h3>{{ results.apgar_category }}</h3>
+        <h3 class="{{ results.apgar_severity }}">{{ results.apgar_category }}</h3>
 
         <ul class="score-list">
           {% if results.apgar_score >= 7 %}
@@ -179,7 +192,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
         <div class="birth-item-val">{{ results.maternal_age }} years</div>
       </div>
       <div class="birth-item">
-        <div class="birth-item-lbl">Child's Sex</div>
+        <div class="birth-item-lbl">Child's Gender</div>
         <div class="birth-item-val">{{ results.child_gender|title }}</div>
       </div>
       <div class="birth-item">
@@ -377,11 +390,47 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
   </div>
 
   <div class="charts-card">
-    <div class="section-title">Final Risk Chart</div>
-    <div class="chart-full">
-      <img src="{{ results.plot_paths.final }}" alt="Final risk output">
+  <div class="section-title">Final Risk Chart</div>
+  <div class="chart-full">
+    <img src="{{ results.plot_paths.final }}" alt="Final risk output">
+  </div>
+
+  <div class="graph-help">
+    <div class="graph-help-grid">
+
+      <div class="graph-help-k">How to read</div>
+      <div class="graph-help-v">
+        The dashed curve shows the combined fuzzy-rule result.
+        The vertical line marks your baby's calculated score.
+      </div>
+
+      <div class="graph-help-k">Green zone</div>
+      <div class="graph-help-v">
+        Lower monitoring level.
+        Most birth and family factors are within typical ranges.
+      </div>
+
+      <div class="graph-help-k">Yellow zone</div>
+      <div class="graph-help-v">
+        Moderate monitoring level.
+        Some factors may need scheduled follow-up.
+      </div>
+
+      <div class="graph-help-k">Red zone</div>
+      <div class="graph-help-v">
+        Higher monitoring level.
+        Earlier pediatric consultation is recommended.
+      </div>
+
+      <div class="graph-help-k">Important</div>
+      <div class="graph-help-v">
+        This is a guidance estimate only.
+        It does not confirm disease or replace medical advice.
+      </div>
+
     </div>
   </div>
+</div>
 
   <!-- Disclaimer -->
   <div style="background:rgba(15,118,110,.06);border:1px solid rgba(15,118,110,.2);border-radius:12px;padding:16px;margin-bottom:20px">
