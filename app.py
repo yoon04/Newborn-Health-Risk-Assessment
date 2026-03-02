@@ -23,7 +23,7 @@ def index():
         birth_week  = float(request.form['birth_week'])
 
         weight_val  = float(request.form['birth_weight'])
-        weight_unit = request.form.get('weight_unit', 'g')
+        weight_unit = request.form.get('weight_unit', 'lb')
         birth_weight_g = convert_weight_to_grams(weight_val, weight_unit)
 
         maternal_age  = int(request.form['maternal_age'])

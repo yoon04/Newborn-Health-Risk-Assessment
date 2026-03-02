@@ -201,6 +201,105 @@ INHERITANCE_MODES = {
         'explanation': 'Unknown inheritance pattern uses a cautious default estimate.',
     },
 }
+
+DISEASE_GUIDES = {
+    'diabetes': {
+        'about': 'This family condition is about how the body handles sugar.',
+        'watch_for': 'Watch for poor feeding, unusual sleepiness, or slow weight gain.',
+        'next_step': 'Keep regular baby checkups and ask if sugar and growth checks are needed.',
+    },
+    'heartdisease': {
+        'about': 'This family condition is about how well the heart pumps blood.',
+        'watch_for': 'Watch for fast breathing, tiring during feeding, or blue color around lips.',
+        'next_step': 'Ask your doctor if an early heart check is needed after birth.',
+    },
+    'hemoglobine': {
+        'about': 'This is a family blood condition that can affect strength and energy.',
+        'watch_for': 'Watch for pale skin, low energy, or slower weight gain.',
+        'next_step': 'Ask when a simple blood check is needed and follow growth checks closely.',
+    },
+    'congenitaldeafness': {
+        'about': 'This family condition can affect hearing from birth.',
+        'watch_for': 'Watch for little response to loud sounds or familiar voices as the baby grows.',
+        'next_step': 'Do hearing checks early and repeat them if your doctor advises.',
+    },
+    'musculardystrophy': {
+        'about': 'This family condition can make muscles weaker over time.',
+        'watch_for': 'Watch for weak movement, weak sucking, or slow motor milestones.',
+        'next_step': 'Track movement milestones and ask for early support if delays appear.',
+    },
+    'colorblindness': {
+        'about': 'This family condition affects how some colors are seen.',
+        'watch_for': 'In newborns, this usually does not show clear signs right away.',
+        'next_step': 'Later, ask about a color-vision check when your child is old enough.',
+    },
+}
+
+MODE_SIMPLE_LABELS = {
+    'dominant_both_parents': 'Family pattern: strong from both parents',
+    'dominant_one_parent': 'Family pattern: strong from one parent',
+    'dominant_none_parents_grandparent_yes': 'Family pattern: from grandparent side',
+    'recessive_both_parents_carriers': 'Family pattern: both parents carry it',
+    'recessive_one_parent_carrier': 'Family pattern: one parent carries it',
+    'recessive_none_parents_grandparent_yes': 'Family pattern: possible from grandparent side',
+    'xlinked': 'Family pattern: linked to parent side and child sex',
+    'xlinked_mother_carrier': 'Family pattern: linked to parent side and child sex',
+    'complex': 'Family pattern: mixed family and lifestyle factors',
+    'unknown': 'Family pattern: not clearly known',
+}
+
+MODE_SIMPLE_REASON = {
+    'dominant_both_parents': 'Both parents have this condition in the family, so the chance can be higher.',
+    'dominant_one_parent': 'One parent has this condition in the family, so there is still a clear chance.',
+    'dominant_none_parents_grandparent_yes': 'Parents are not affected, but family history from grandparents still adds some chance.',
+    'recessive_both_parents_carriers': 'Both parents carry this condition in the family, so risk is meaningful.',
+    'recessive_one_parent_carrier': 'Only one parent carries this condition, so chance is usually lower.',
+    'recessive_none_parents_grandparent_yes': 'Grandparent history suggests this condition may still run in the family.',
+    'complex': 'This condition can come from both family history and daily life factors, so the estimate is moderate.',
+    'unknown': 'Because the family pattern is not clear, the estimate stays cautious.',
+}
+
+
+def disease_key(name):
+    return ''.join(ch for ch in (name or '').strip().lower() if ch.isalpha())
+
+
+def disease_guide(name):
+    key = disease_key(name)
+    if key in DISEASE_GUIDES:
+        return DISEASE_GUIDES[key]
+    return {
+        'about': f'{name} was entered as a custom family condition.',
+        'watch_for': 'Watch for unusual feeding, breathing, hearing, movement, sleep, or growth changes.',
+        'next_step': 'Share this condition name with your doctor and ask which baby checks are best.',
+    }
+
+
+def inherited_level_label(prob):
+    if prob < 0.15:
+        return 'Low'
+    if prob < 0.40:
+        return 'Medium'
+    return 'Higher'
+
+
+def xlinked_simple_reason(child_gender, parent, status):
+    g = normalize_gender(child_gender)
+    p = (parent or 'mother').strip().lower()
+    s = (status or 'carrier').strip().lower()
+
+    if p == 'mother':
+        if s == 'affected':
+            return 'This was marked on the mother side, and mother has the condition, so chance can be higher.'
+        return 'This was marked on the mother side, and mother carries it in the family, so there is still a clear chance.'
+
+    if g == 'male':
+        return 'This was marked on the father side, and for a boy this path usually lowers the chance.'
+    if g == 'female':
+        return 'This was marked on the father side, and for a girl this path can raise the chance.'
+    return 'This was marked on the father side, and child sex is unknown, so the estimate is averaged.'
+
+
 def fuzzify_genetic_base(base_prob):
     return {
         'low': trapezoidal_mf(base_prob, 0.0, 0.0, 0.10, 0.30),
@@ -297,6 +396,11 @@ def estimate_inherited_prob(diseases, child_gender='unknown'):
         parent_signal = info.get('parent_signal', 0.2)
         gp_signal = info.get('grandparent_signal', 0.2)
         mode_explanation = info['explanation']
+        mode_simple_reason = MODE_SIMPLE_REASON.get(
+            mode_key,
+            'Family history details were limited, so this estimate stays cautious.',
+        )
+        mode_display_label = MODE_SIMPLE_LABELS.get(mode_key, MODE_SIMPLE_LABELS['unknown'])
 
         if mode_key in ('xlinked', 'xlinked_mother_carrier'):
             x_parent = d.get('xlinked_parent', 'mother')
@@ -310,6 +414,7 @@ def estimate_inherited_prob(diseases, child_gender='unknown'):
             mode_explanation = (
                 f"{x_reason} Parent selected: {x_parent}. Parent status: {x_status}. {gender_note}"
             )
+            mode_simple_reason = xlinked_simple_reason(child_gender, x_parent, x_status)
 
         fuzzy_levels = apply_genetic_rules(
             base_prob,
@@ -317,6 +422,8 @@ def estimate_inherited_prob(diseases, child_gender='unknown'):
             gp_signal,
         )
         fuzzy_prob = defuzzify_genetic_risk(fuzzy_levels, base_prob)
+        guide = disease_guide(d.get('disease', 'Unknown'))
+        simple_risk_level = inherited_level_label(fuzzy_prob)
         probs_list.append({
             'disease': d['disease'],
             'base_prob': base_prob,
@@ -327,6 +434,12 @@ def estimate_inherited_prob(diseases, child_gender='unknown'):
                 f"to {fuzzy_prob*100:.1f}%."
             ),
             'mode_label': info['label'],
+            'mode_display_label': mode_display_label,
+            'simple_risk_level': simple_risk_level,
+            'simple_about': guide['about'],
+            'simple_watch_for': guide['watch_for'],
+            'simple_next_step': guide['next_step'],
+            'simple_why_score': mode_simple_reason,
         })
         explanations.append(
             f"{d['disease']}: {mode_explanation} "
