@@ -683,4 +683,3 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'child_gender': normalized_gender,
         'delivery_type': delivery_type,
     }
-
