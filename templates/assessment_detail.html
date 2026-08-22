@@ -18,7 +18,7 @@
 <main>
   <section class="card">
     <h1>Saved Assessment</h1>
-    <p class="meta">Created {{ assessment.created_at.strftime('%Y-%m-%d %H:%M') if assessment.created_at else '-' }} · Algorithm {{ assessment.algorithm_version }}</p>
+    <p class="meta">Created {{ assessment.created_at.strftime('%Y-%m-%d %H:%M') if assessment.created_at else '-' }} · Algorithm {{ assessment.algorithm_version }} · Signed in as {{ current_user.name }} · <a href="{{ url_for('logout') }}">Log out</a></p>
     <div class="grid">
       <div class="item"><div class="label">Overall Risk Index</div><div class="risk">{{ '%.1f'|format(assessment.overall_risk_index|float) }} / 100</div></div>
       <div class="item"><div class="label">Risk Level</div><div class="value">{{ assessment.risk_level }}</div></div>

@@ -1,16 +1,20 @@
 """Database models for stored newborn risk assessments."""
 
 from sqlalchemy import CheckConstraint, func
+from flask_login import UserMixin
 
 from extensions import db
 
 
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=True)
-    email = db.Column(db.String(320), nullable=True, index=True)
+    email = db.Column(db.String(320), nullable=True, unique=True, index=True)
+    # Nullable keeps legacy users created before authentication readable. New
+    # registrations always populate this field with a Werkzeug hash.
+    password_hash = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, server_default=func.now())
 
     assessments = db.relationship(

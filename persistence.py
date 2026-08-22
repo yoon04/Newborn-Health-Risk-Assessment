@@ -1,9 +1,7 @@
 """Persistence helpers that keep database writes separate from fuzzy logic."""
 
-import re
-
 from extensions import db
-from models import Assessment, User
+from models import Assessment
 
 
 ALGORITHM_VERSION = 'fuzzy-v2'
@@ -12,9 +10,7 @@ RAW_INPUT_FIELDS = (
     'birth_week', 'birth_weight', 'weight_unit', 'maternal_age',
     'child_gender', 'delivery_type', 'delivery_comp',
     'family_history_status', 'family_disease', 'affected_relative',
-    'user_name', 'user_email',
 )
-EMAIL_PATTERN = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
 def _json_safe(value):
@@ -38,33 +34,17 @@ def _raw_input_snapshot(raw_form):
     }
 
 
-def _get_or_create_user(name, email):
-    name = (name or '').strip() or None
-    email = (email or '').strip().lower() or None
-    if not name and not email:
-        return None
-
-    user = User.query.filter_by(email=email).first() if email else None
-    if user is None:
-        user = User(name=name, email=email)
-        db.session.add(user)
-    elif name and not user.name:
-        user.name = name
-    return user
-
-
 def _result_snapshot(results):
     excluded = {'plot_paths', 'pdf_report_token'}
     return _json_safe({key: value for key, value in results.items() if key not in excluded})
 
 
-def build_assessment_record(values, results, raw_form):
+def build_assessment_record(values, results, raw_form, user_id):
     """Build a database record without committing it."""
     family_history = values['family_history']
-    user = _get_or_create_user(values.get('user_name'), values.get('user_email'))
 
     record = Assessment(
-        user=user,
+        user_id=user_id,
         appearance=values['appearance'],
         pulse=values['pulse'],
         grimace=values['grimace'],
@@ -109,9 +89,9 @@ def build_assessment_record(values, results, raw_form):
     return record
 
 
-def save_assessment(values, results, raw_form):
+def save_assessment(values, results, raw_form, user_id):
     """Add and commit one assessment; callers roll back on database errors."""
-    record = build_assessment_record(values, results, raw_form)
+    record = build_assessment_record(values, results, raw_form, user_id)
     db.session.add(record)
     db.session.commit()
     return record

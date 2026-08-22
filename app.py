@@ -3,15 +3,18 @@ import os
 import re
 import secrets
 from datetime import datetime
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from flask import Flask, abort, render_template, request, send_file
+from flask import Flask, abort, redirect, render_template, request, send_file, url_for
+from flask_login import current_user, login_required, login_user, logout_user
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from extensions import db, migrate
+from extensions import db, login_manager, migrate
 from fuzzy_logic import assess_risk, convert_weight_to_grams
-from models import Assessment
+from models import Assessment, User
 from pdf_report import build_pdf_report
 from persistence import save_assessment
 
@@ -34,7 +37,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate.init_app(app, db)
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to continue.'
+login_manager.login_message_category = 'info'
 REPORT_TOKEN_MAX_AGE_SECONDS = 60 * 60
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return db.session.get(User, int(user_id))
+    except (TypeError, ValueError, SQLAlchemyError):
+        db.session.rollback()
+        return None
 
 if not os.path.exists('static'):
     os.makedirs('static')
@@ -73,6 +89,7 @@ FAMILY_DISEASE_LABELS = dict((*FAMILY_DISEASE_OPTIONS, OTHER_FAMILY_DISEASE))
 MAX_USER_NAME_LENGTH = 120
 MAX_USER_EMAIL_LENGTH = 320
 USER_EMAIL_PATTERN = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+MIN_PASSWORD_LENGTH = 8
 MIN_BIRTH_WEIGHT_G = 100
 MAX_BIRTH_WEIGHT_G = 6000
 DECIMAL_NUMBER_PATTERN = re.compile(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)')
@@ -159,16 +176,6 @@ def validate_submission(form):
     else:
         values['delivery_comp'] = int(raw_complication)
 
-    user_name = (form.get('user_name') or '').strip()
-    user_email = (form.get('user_email') or '').strip().lower()
-    if len(user_name) > MAX_USER_NAME_LENGTH or any(not character.isprintable() for character in user_name):
-        errors['user_name'] = 'Name must be 120 or fewer printable characters.'
-    if user_email and (
-        len(user_email) > MAX_USER_EMAIL_LENGTH
-        or not USER_EMAIL_PATTERN.fullmatch(user_email)
-    ):
-        errors['user_email'] = 'Enter a valid email address or leave it blank.'
-
     family_status = (form.get('family_history_status') or '').strip().lower()
     disease_choice = (form.get('family_disease') or '').strip().lower()
     affected_relative = (form.get('affected_relative') or '').strip().lower()
@@ -186,9 +193,47 @@ def validate_submission(form):
         'disease': FAMILY_DISEASE_LABELS.get(disease_choice, '') if family_status == 'yes' else '',
         'affected_relative': affected_relative if family_status == 'yes' and affected_relative in AFFECTED_RELATIVES else '',
     }
-    values['user_name'] = user_name
-    values['user_email'] = user_email
     return values, errors, []
+
+
+def validate_registration(form):
+    """Validate registration fields and return normalized values."""
+    errors = {}
+    name = (form.get('name') or '').strip()
+    email = (form.get('email') or '').strip().lower()
+    password = form.get('password') or ''
+    confirm_password = form.get('confirm_password') or ''
+
+    if not name:
+        errors['name'] = 'Enter your name.'
+    elif len(name) > MAX_USER_NAME_LENGTH or any(not character.isprintable() for character in name):
+        errors['name'] = 'Name must be 120 or fewer printable characters.'
+
+    if not email:
+        errors['email'] = 'Enter your email address.'
+    elif len(email) > MAX_USER_EMAIL_LENGTH or not USER_EMAIL_PATTERN.fullmatch(email):
+        errors['email'] = 'Enter a valid email address.'
+
+    if len(password) < MIN_PASSWORD_LENGTH:
+        errors['password'] = f'Password must be at least {MIN_PASSWORD_LENGTH} characters.'
+    if password != confirm_password:
+        errors['confirm_password'] = 'Passwords do not match.'
+
+    return {
+        'name': name,
+        'email': email,
+        'password': password,
+    }, errors
+
+
+def _safe_next_url(target):
+    """Allow only local redirects after login."""
+    if not target:
+        return None
+    parsed = urlparse(target)
+    if parsed.scheme or parsed.netloc or not target.startswith('/') or target.startswith('//'):
+        return None
+    return target
 
 
 def render_assessment_form(errors=None, form_data=None, family_rows=None, status=200):
@@ -298,7 +343,83 @@ def build_report_payload(values, results):
         'recommendation': results['recommendation'],
     }
 
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    errors = {}
+    form_data = {}
+    if request.method == 'POST':
+        form_data = request.form.to_dict(flat=True)
+        values, errors = validate_registration(request.form)
+        if not errors:
+            try:
+                if User.query.filter_by(email=values['email']).first() is not None:
+                    errors['email'] = 'An account with this email already exists.'
+                else:
+                    user = User(
+                        name=values['name'],
+                        email=values['email'],
+                        password_hash=generate_password_hash(values['password']),
+                    )
+                    db.session.add(user)
+                    db.session.commit()
+                    login_user(user)
+                    return redirect(url_for('index'))
+            except IntegrityError:
+                db.session.rollback()
+                errors['email'] = 'An account with this email already exists.'
+            except SQLAlchemyError:
+                db.session.rollback()
+                app.logger.exception('User registration could not be saved.')
+                errors['form'] = 'Registration is temporarily unavailable. Please try again.'
+
+    return render_template('register.html', errors=errors, form_data=form_data)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    errors = {}
+    form_data = {}
+    next_url = request.args.get('next', '')
+    if request.method == 'POST':
+        form_data = request.form.to_dict(flat=True)
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        next_url = request.form.get('next') or next_url
+        try:
+            user = User.query.filter_by(email=email).first() if email else None
+            if user is not None and user.password_hash and check_password_hash(user.password_hash, password):
+                login_user(user)
+                return redirect(_safe_next_url(next_url) or url_for('index'))
+            errors['form'] = 'Invalid email or password.'
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception('Login lookup failed.')
+            errors['form'] = 'Login is temporarily unavailable. Please try again.'
+
+    return render_template(
+        'login.html',
+        errors=errors,
+        form_data=form_data,
+        next_url=_safe_next_url(next_url) or '',
+    )
+
+
+@app.get('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
 @app.route('/', methods=['GET', 'POST'])
+@login_required
 def index():
     if request.method == 'POST':
         values, errors, family_rows = validate_submission(request.form)
@@ -327,6 +448,7 @@ def index():
                     values,
                     results,
                     request.form.to_dict(flat=True),
+                    current_user.id,
                 )
                 results['assessment_id'] = stored_assessment.id
             except SQLAlchemyError:
@@ -344,6 +466,7 @@ def index():
 
 
 @app.post('/report.pdf')
+@login_required
 def download_report():
     token = (request.form.get('report_token') or '').strip()
     try:
@@ -367,9 +490,16 @@ def download_report():
 
 
 @app.get('/assessments')
+@login_required
 def assessment_history():
     try:
-        assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(100).all()
+        assessments = (
+            Assessment.query
+            .filter(Assessment.user_id == current_user.id)
+            .order_by(Assessment.created_at.desc())
+            .limit(100)
+            .all()
+        )
     except SQLAlchemyError:
         db.session.rollback()
         return render_template(
@@ -381,9 +511,14 @@ def assessment_history():
 
 
 @app.get('/assessments/<int:assessment_id>')
+@login_required
 def assessment_detail(assessment_id):
     try:
-        assessment = db.session.get(Assessment, assessment_id)
+        assessment = (
+            Assessment.query
+            .filter_by(id=assessment_id, user_id=current_user.id)
+            .first()
+        )
     except SQLAlchemyError:
         db.session.rollback()
         return 'Assessment history is unavailable until the database is configured and migrated.', 503

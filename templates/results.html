@@ -32,7 +32,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 </style>
 </head>
 <body>
-<div class="hero"><h1>Assessment <em>Results</em></h1><p>Summary of newborn risk indicators</p></div>
+<div class="hero"><h1>Assessment <em>Results</em></h1><p>Summary of newborn risk indicators<br>Signed in as <strong>{{ current_user.name }}</strong> · <a href="{{ url_for('logout') }}">Log out</a></p></div>
 <div class="main">
 
   <div class="apgar-card">

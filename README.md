@@ -20,6 +20,8 @@ Important: This tool is educational only and is not a medical diagnosis.
 - Simple family-history input: Yes, No, or Unknown
 - If a disease is known: disease name and who has it
 - Family-history fuzzy indicator without an invented disease-specific probability
+- User registration and login with Flask-Login sessions
+- Private assessment history for each signed-in user
 - Auto-generated charts:
   - APGAR membership chart
   - Gestational-age chart
@@ -46,6 +48,8 @@ Newborn-Health-Risk-Assessment/
 |   |-- assessments.html
 |   |-- assessment_detail.html
 |   |-- form.html
+|   |-- login.html
+|   |-- register.html
 |   `-- results.html
 `-- static/
     `-- (generated chart images)
@@ -58,6 +62,7 @@ Newborn-Health-Risk-Assessment/
 
 Python packages used by the app:
 - Flask
+- Flask-Login
 - Flask-SQLAlchemy
 - Flask-Migrate
 - psycopg (PostgreSQL driver)
@@ -127,6 +132,16 @@ Create the database if needed:
 ```powershell
 psql -U postgres -c "CREATE DATABASE newborn_health;"
 ```
+
+## Authentication
+
+Assessment creation and saved assessment history require an account. Use:
+
+- `/register` to create an account with a name, email, and password
+- `/login` to start a session
+- `/logout` to end the session
+
+Passwords are stored only as Werkzeug password hashes. New assessments are automatically associated with the signed-in user's `user_id`; name and email do not need to be entered again on the assessment form. Each user can view only their own assessment history and saved results.
 
 ## Database migrations
 

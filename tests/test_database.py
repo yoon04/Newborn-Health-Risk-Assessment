@@ -4,6 +4,7 @@ from unittest.mock import patch
 from flask import Flask
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.datastructures import MultiDict
+from werkzeug.security import generate_password_hash
 
 import app as application
 from extensions import db
@@ -28,8 +29,6 @@ def valid_values():
         'family_history_status': 'yes',
         'family_disease': 'cystic_fibrosis',
         'affected_relative': 'mother',
-        'user_name': 'Test User',
-        'user_email': 'test@example.com',
     })
     values, errors, _rows = application.validate_submission(form)
     assert errors == {}
@@ -97,9 +96,21 @@ class DatabasePersistenceTests(unittest.TestCase):
         db.session.query(User).delete()
         db.session.commit()
 
+    @staticmethod
+    def create_user(email='test@example.com'):
+        user = User(
+            name='Test User',
+            email=email,
+            password_hash=generate_password_hash('test-password'),
+        )
+        db.session.add(user)
+        db.session.commit()
+        return user
+
     def test_record_preserves_raw_inputs_and_calculated_results(self):
         values, raw_form = valid_values()
-        record = save_assessment(values, sample_results(), raw_form)
+        user = self.create_user()
+        record = save_assessment(values, sample_results(), raw_form, user.id)
 
         stored = db.session.get(Assessment, record.id)
         self.assertIsNotNone(stored)
@@ -115,28 +126,32 @@ class DatabasePersistenceTests(unittest.TestCase):
         self.assertEqual(stored.user.name, 'Test User')
         self.assertEqual(stored.user.email, 'test@example.com')
 
-    def test_same_email_reuses_basic_user_record(self):
+    def test_assessments_are_saved_for_the_supplied_user(self):
         values, raw_form = valid_values()
-        first = save_assessment(values, sample_results(), raw_form)
-        second = save_assessment(values, sample_results(), raw_form)
+        first_user = self.create_user('first@example.com')
+        second_user = self.create_user('second@example.com')
+        first = save_assessment(values, sample_results(), raw_form, first_user.id)
+        second = save_assessment(values, sample_results(), raw_form, second_user.id)
 
-        self.assertEqual(first.user_id, second.user_id)
-        self.assertEqual(User.query.count(), 1)
+        self.assertNotEqual(first.user_id, second.user_id)
+        self.assertEqual(User.query.count(), 2)
 
     def test_commit_error_can_be_rolled_back_without_a_partial_record(self):
         values, raw_form = valid_values()
+        user = self.create_user()
         with patch.object(db.session, 'commit', side_effect=SQLAlchemyError('database unavailable')):
             with self.assertRaises(SQLAlchemyError):
-                save_assessment(values, sample_results(), raw_form)
+                save_assessment(values, sample_results(), raw_form, user.id)
             db.session.rollback()
 
         self.assertEqual(Assessment.query.count(), 0)
-        self.assertEqual(User.query.count(), 0)
+        self.assertEqual(User.query.count(), 1)
 
     def test_record_builder_does_not_change_fuzzy_result_values(self):
         values, raw_form = valid_values()
         results = sample_results()
-        record = build_assessment_record(values, results, raw_form)
+        user = self.create_user()
+        record = build_assessment_record(values, results, raw_form, user.id)
 
         self.assertEqual(float(record.overall_risk_index), results['overall_risk_index'])
         self.assertEqual(record.triggered_rules, results['triggered_rules'])

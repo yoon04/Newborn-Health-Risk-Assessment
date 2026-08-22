@@ -2,8 +2,11 @@ import unittest
 from unittest.mock import patch
 
 from werkzeug.datastructures import MultiDict
+from werkzeug.security import generate_password_hash
 
 import app as application
+from extensions import db
+from models import Assessment, User
 
 
 def valid_form(**overrides):
@@ -124,7 +127,30 @@ class SubmissionValidationTests(unittest.TestCase):
 class RouteValidationTests(unittest.TestCase):
     def setUp(self):
         application.app.config.update(TESTING=True)
+        with application.app.app_context():
+            db.create_all()
+            db.session.query(Assessment).delete()
+            db.session.query(User).delete()
+            user = User(
+                name='Route Test User',
+                email='route-test@example.com',
+                password_hash=generate_password_hash('test-password'),
+            )
+            db.session.add(user)
+            db.session.commit()
         self.client = application.app.test_client()
+        response = self.client.post('/login', data={
+            'email': 'route-test@example.com',
+            'password': 'test-password',
+        })
+        self.assertEqual(response.status_code, 302)
+
+    def tearDown(self):
+        with application.app.app_context():
+            db.session.rollback()
+            db.session.query(Assessment).delete()
+            db.session.query(User).delete()
+            db.session.commit()
 
     def test_form_has_five_apgar_components_and_no_manual_total(self):
         response = self.client.get('/')
@@ -150,6 +176,21 @@ class RouteValidationTests(unittest.TestCase):
         self.assertIn(b'Other disease / not listed', response.data)
         for technical_name in (b'name="mode_', b'name="xlinked_', b'name="genotype"', b'name="carrier_status"'):
             self.assertNotIn(technical_name, response.data)
+
+    def test_assessment_form_has_no_repeated_user_identity_inputs(self):
+        response = self.client.get('/')
+
+        self.assertNotIn(b'name="user_name"', response.data)
+        self.assertNotIn(b'name="user_email"', response.data)
+        self.assertIn(b'Signed in as', response.data)
+
+    def test_logged_out_user_is_redirected_from_protected_history(self):
+        self.client.get('/logout')
+
+        response = self.client.get('/assessments')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login', response.headers['Location'])
 
     @patch('app.assess_risk')
     def test_invalid_submission_never_reaches_fuzzy_assessment(self, assess_risk):

@@ -15,7 +15,7 @@
 <body>
 <main>
   <h1>Assessment History</h1>
-  <p>Previously stored assessment results, newest first.</p>
+  <p>Previously stored assessment results for <strong>{{ current_user.name }}</strong>, newest first. · <a href="{{ url_for('logout') }}">Log out</a></p>
   {% if storage_error %}<div class="notice">{{ storage_error }}</div>{% endif %}
   {% if assessments %}
   <table>
