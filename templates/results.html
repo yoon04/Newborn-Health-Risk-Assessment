@@ -120,7 +120,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
   <div class="charts-card"><div class="section-title">Overall Risk Index Chart</div><div class="chart-full"><img src="{{ results.plot_paths.final }}" alt="Final risk output"></div><div class="graph-help"><div class="graph-help-grid"><div class="graph-help-k">How to read</div><div class="graph-help-v">The dashed curve shows the combined fuzzy-rule result. The vertical line marks the calculated Risk Index.</div><div class="graph-help-k">Important</div><div class="graph-help-v">This is educational guidance only. It does not confirm disease or replace medical advice.</div></div></div></div>
 
   <div class="score-card"><p class="score-desc"><strong>Note:</strong> This is not a clinical diagnosis. Please consult a healthcare professional for medical decisions.</p></div>
-  <div class="report-actions"><form method="POST" action="{{ url_for('download_report') }}"><input type="hidden" name="report_token" value="{{ results.pdf_report_token }}"><button type="submit" class="download-btn">Download PDF Summary</button></form><a href="/" class="back-btn">&#x2190; New Assessment</a></div>
+  {% if results.storage_warning %}<div class="score-card"><p class="score-desc"><strong>Save notice:</strong> {{ results.storage_warning }}</p></div>{% endif %}
+  <div class="report-actions"><form method="POST" action="{{ url_for('download_report') }}"><input type="hidden" name="report_token" value="{{ results.pdf_report_token }}"><button type="submit" class="download-btn">Download PDF Summary</button></form>{% if results.assessment_id %}<a href="{{ url_for('assessment_detail', assessment_id=results.assessment_id) }}" class="back-btn">View Saved Assessment</a>{% endif %}<a href="{{ url_for('assessment_history') }}" class="back-btn">Assessment History</a><a href="/" class="back-btn">&#x2190; New Assessment</a></div>
 </div>
 </body>
 </html>

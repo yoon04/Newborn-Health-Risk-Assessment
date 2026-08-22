@@ -34,11 +34,17 @@ Important: This tool is educational only and is not a medical diagnosis.
 ```text
 Newborn-Health-Risk-Assessment/
 |-- app.py
+|-- extensions.py
 |-- fuzzy_logic.py
+|-- models.py
 |-- newborn_risk_assessment.py
-|-- requiremens.txt
+|-- persistence.py
+|-- requirements.txt
 |-- synthetic_newborn_data.csv
+|-- migrations/
 |-- templates/
+|   |-- assessments.html
+|   |-- assessment_detail.html
 |   |-- form.html
 |   `-- results.html
 `-- static/
@@ -52,12 +58,15 @@ Newborn-Health-Risk-Assessment/
 
 Python packages used by the app:
 - Flask
+- Flask-SQLAlchemy
+- Flask-Migrate
+- psycopg (PostgreSQL driver)
 - numpy
 - scipy
 - matplotlib
 - pandas
 
-Note: The repo currently contains `requiremens.txt` (spelling as-is). The commands below use that filename.
+The project now uses `requirements.txt`. The older misspelled `requiremens.txt` file was removed.
 
 ## Step-by-Step Setup and Run
 
@@ -87,7 +96,7 @@ source .venv/bin/activate
 3. Install dependencies.
 
 ```bash
-pip install flask matplotlib -r requiremens.txt
+pip install -r requirements.txt
 ```
 
 4. Run the Flask app.
@@ -101,6 +110,48 @@ python app.py
 ```text
 http://127.0.0.1:5000
 ```
+
+## PostgreSQL configuration
+
+Create a project-local `.env` file from the example and replace the placeholder values:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+The application automatically loads `.env` at startup, so you do not need to enter `DATABASE_URL` or `SECRET_KEY` in every terminal session. Explicit environment variables still take precedence over `.env`. The application accepts the simpler `postgresql://...` form as well and normalizes it for psycopg. Without `DATABASE_URL`, a local SQLite fallback keeps development and tests importable; production deployments should always configure PostgreSQL.
+
+Create the database if needed:
+
+```powershell
+psql -U postgres -c "CREATE DATABASE newborn_health;"
+```
+
+## Database migrations
+
+The initial migration is included in the repository. After configuring `DATABASE_URL`, apply it with:
+
+```powershell
+flask db upgrade
+```
+
+If you are setting up migrations in a copy that does not yet contain the `migrations/` directory, initialize and generate the schema first:
+
+```powershell
+flask db init
+flask db migrate -m "Initial database schema"
+flask db upgrade
+```
+
+For later model changes:
+
+```powershell
+flask db migrate -m "Describe the schema change"
+flask db upgrade
+```
+
+The application does not call `db.create_all()` and does not delete or recreate tables automatically.
 
 6. Complete the 4 form steps in the UI:
 - Step 1: APGAR components (Appearance, Pulse, Grimace, Activity, Respiration)
@@ -118,6 +169,7 @@ http://127.0.0.1:5000
 - The detailed result page shows module indices, contributing factors, important triggered rules, and charts
 - Charts are saved/updated in `static/`
 - Select **Download PDF Summary** on the results page to save the assessment report.
+- Open `/assessments` to view saved assessments, or select **Assessment History** from a result.
 - PDF download tokens expire after one hour. For multi-worker or restarted deployments, set a shared `SECRET_KEY` environment variable so signed downloads remain valid.
 
 ## How Risk is Calculated (High Level)
@@ -169,7 +221,7 @@ When you run assessments, the app writes/overwrites chart images in `static/`:
 Install dependencies again:
 
 ```bash
-pip install flask matplotlib -r requiremens.txt
+pip install -r requirements.txt
 ```
 
 ### 2) App starts but no CSS/JS changes appear
@@ -202,20 +254,6 @@ flask run --port 5001
 - Core fuzzy logic and plotting: `fuzzy_logic.py`
 - Older CLI-style prototype: `newborn_risk_assessment.py`
 - Templates: `templates/form.html` and `templates/results.html`
-
-## Suggested Improvement (Optional)
-
-Rename `requiremens.txt` to `requirements.txt` for standard tooling compatibility:
-
-```bash
-mv requiremens.txt requirements.txt
-```
-
-Then install with:
-
-```bash
-pip install -r requirements.txt
-```
 
 ## Disclaimer
 

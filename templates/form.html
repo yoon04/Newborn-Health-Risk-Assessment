@@ -384,6 +384,22 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
       </div>
       <div class="card-bd">
         <div class="review-grid" id="rev-grid"></div>
+        <div class="fg" style="margin-top:22px">
+          <label class="fl">Your details (optional)</label>
+          <div class="dis-frow">
+            <div class="fg">
+              <label class="fl" for="user_name">Name</label>
+              <input type="text" id="user_name" name="user_name" maxlength="120" class="fi{% if errors.get('user_name') %} err{% endif %}" value="{{ form_data.get('user_name', '') }}" placeholder="Optional">
+              <div class="ferr{% if errors.get('user_name') %} show{% endif %}" id="err_user_name">{{ errors.get('user_name', 'Name is optional.') }}</div>
+            </div>
+            <div class="fg">
+              <label class="fl" for="user_email">Email</label>
+              <input type="email" id="user_email" name="user_email" maxlength="320" class="fi{% if errors.get('user_email') %} err{% endif %}" value="{{ form_data.get('user_email', '') }}" placeholder="Optional">
+              <div class="ferr{% if errors.get('user_email') %} show{% endif %}" id="err_user_email">{{ errors.get('user_email', 'Email is optional.') }}</div>
+            </div>
+          </div>
+          <div class="hint">These details are used only to associate saved assessments. No account or login is created.</div>
+        </div>
         <div class="nav-bar">
           <button type="button" class="btn btn-ghost" onclick="goPrev(4)">&#x2190; Edit</button>
           <button type="submit" class="btn btn-sub">Calculate Risk Assessment</button>
@@ -398,10 +414,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
     const SERVER_ERRORS = {{ errors | tojson }};
     const APGAR_FIELDS = ['appearance','pulse','grimace','activity','respiration'];
     const BIRTH_FIELDS = ['birth_week','birth_weight','maternal_age','child_gender','delivery_type','delivery_comp'];
+    const USER_FIELDS = ['user_name','user_email'];
     const serverErrorFields=Object.keys(SERVER_ERRORS);
     let curStep=serverErrorFields.some(f=>APGAR_FIELDS.includes(f))?1:
       serverErrorFields.some(f=>BIRTH_FIELDS.includes(f))?2:
-      serverErrorFields.some(f=>['family_history_status','family_disease','affected_relative'].includes(f))?3:1;
+      serverErrorFields.some(f=>['family_history_status','family_disease','affected_relative'].includes(f))?3:
+      serverErrorFields.some(f=>USER_FIELDS.includes(f))?4:1;
     let apgarVals={};
 
 function refreshProg(){
@@ -600,6 +618,8 @@ function buildReview(){
   const familyDiseaseSelect=document.getElementById('family_disease');
   const familyDisease=familyDiseaseSelect.value?familyDiseaseSelect.selectedOptions[0].textContent:'-';
   const affectedRelative=document.getElementById('affected_relative').value;
+  const userName=document.getElementById('user_name').value.trim();
+  const userEmail=document.getElementById('user_email').value.trim();
   const relativeLabels={father:'Father',mother:'Mother',both_parents:'Both parents',other_family_member:'Other family member',unknown:'Unknown'};
   const items=[
     {l:'APGAR Score',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'-'},
@@ -611,6 +631,8 @@ function buildReview(){
     {l:'Delivery Complication',v:dcValue==='0'?'No':dcValue==='1'?'Yes':'-'},
     {l:'Known Family Disease',v:familyStatus==='yes'?'Yes - '+familyDisease:familyStatus==='no'?'No':'Unknown'},
     {l:'Who Has It',v:familyStatus==='yes'?(relativeLabels[affectedRelative]||'-'):'Not applicable'},
+    {l:'Name',v:userName||'Not provided'},
+    {l:'Email',v:userEmail||'Not provided'},
   ];
   document.getElementById('rev-grid').innerHTML=items.map(i=>`<div class="rev-item"><div class="rl">${i.l}</div><div class="rv">${i.v}</div></div>`).join('');
 }

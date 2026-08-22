@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 static/*.png
+.env
+.env.*
+!.env.example
+instance/

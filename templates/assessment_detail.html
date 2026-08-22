@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saved Assessment</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f6f3ee;color:#1f2937;margin:0;padding:32px}
+    main{max-width:1000px;margin:0 auto}.card{background:#fff;padding:24px;margin-bottom:18px;border:1px solid #e2d9cb;border-radius:14px}
+    h1,h2{color:#0f766e}h1{margin-top:0}.meta{color:#64748b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+    .item{background:#f3f6f5;border:1px solid #d8e2df;padding:12px;border-radius:8px}.label{font-size:12px;color:#64748b;margin-bottom:4px}.value{font-weight:600}
+    table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #e2d9cb;vertical-align:top}th{background:#f3f6f5}
+    ul{line-height:1.6}.risk{font-size:26px;font-weight:700;color:#0f766e}.actions a{color:#0f766e;font-weight:600;margin-right:18px}
+    @media(max-width:600px){body{padding:14px}}
+  </style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <h1>Saved Assessment</h1>
+    <p class="meta">Created {{ assessment.created_at.strftime('%Y-%m-%d %H:%M') if assessment.created_at else '-' }} · Algorithm {{ assessment.algorithm_version }}</p>
+    <div class="grid">
+      <div class="item"><div class="label">Overall Risk Index</div><div class="risk">{{ '%.1f'|format(assessment.overall_risk_index|float) }} / 100</div></div>
+      <div class="item"><div class="label">Risk Level</div><div class="value">{{ assessment.risk_level }}</div></div>
+      <div class="item"><div class="label">Confidence</div><div class="value">{{ assessment.confidence_level }}</div></div>
+      <div class="item"><div class="label">APGAR</div><div class="value">{{ assessment.apgar_total }} / 10</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Stored Inputs</h2>
+    <div class="grid">
+      <div class="item"><div class="label">Gestational age</div><div class="value">{{ assessment.birth_week }} weeks</div></div>
+      <div class="item"><div class="label">Birth weight</div><div class="value">{{ assessment.birth_weight_g }} g</div></div>
+      <div class="item"><div class="label">Maternal age</div><div class="value">{{ assessment.maternal_age }} years</div></div>
+      <div class="item"><div class="label">Child gender</div><div class="value">{{ assessment.child_gender|title }}</div></div>
+      <div class="item"><div class="label">Delivery type</div><div class="value">{{ assessment.delivery_type|title }}</div></div>
+      <div class="item"><div class="label">Delivery complication</div><div class="value">{{ 'Yes' if assessment.delivery_complication else 'No' }}</div></div>
+      <div class="item"><div class="label">Family history</div><div class="value">{{ assessment.family_history_status|title }}</div></div>
+      <div class="item"><div class="label">Family disease</div><div class="value">{{ assessment.family_disease_name or 'Not provided' }}</div></div>
+      <div class="item"><div class="label">Who has it</div><div class="value">{{ assessment.family_affected_relative|replace('_', ' ')|title if assessment.family_affected_relative else 'Not provided' }}</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>APGAR Breakdown</h2>
+    <table><thead><tr><th>Component</th><th>Score</th><th>Meaning</th></tr></thead><tbody>
+    {% for name, detail in (assessment.apgar_component_detail or {}).items() %}
+      <tr><td>{{ name|title }}</td><td>{{ detail.score }} / 2</td><td>{{ detail.label }}</td></tr>
+    {% endfor %}
+    </tbody></table>
+    <p>{{ assessment.apgar_breakdown }}</p>
+  </section>
+
+  <section class="card">
+    <h2>Risk Results</h2>
+    <table><thead><tr><th>Module</th><th>Risk Index</th><th>Risk Level</th></tr></thead><tbody>
+      <tr><td>Immediate Condition Risk</td><td>{{ '%.1f'|format(assessment.immediate_risk_index|float) }} / 100</td><td>{{ assessment.immediate_risk_level }}</td></tr>
+      <tr><td>Birth-Related Risk</td><td>{{ '%.1f'|format(assessment.birth_related_risk_index|float) }} / 100</td><td>{{ assessment.birth_related_risk_level }}</td></tr>
+      <tr><td>Family-History Risk</td><td>{{ '%.1f'|format(assessment.family_history_risk_index|float) }} / 100</td><td>{{ assessment.family_history_risk_level }}</td></tr>
+    </tbody></table>
+    <p><strong>{{ assessment.recommendation }}</strong></p>
+  </section>
+
+  <section class="card">
+    <h2>Confidence Basis</h2>
+    <ul>{% for reason in assessment.confidence_reasons or [] %}<li>{{ reason }}</li>{% endfor %}</ul>
+    <h2>Main Contributing Factors</h2>
+    <ol>{% for factor in assessment.main_contributing_factors or [] %}<li><strong>{{ factor.name }}</strong> - {{ factor.description }}</li>{% endfor %}</ol>
+    <h2>Triggered Rules</h2>
+    <table><thead><tr><th>Rule</th><th>Description</th><th>Activation</th></tr></thead><tbody>
+    {% for rule in assessment.triggered_rules or [] %}<tr><td>{{ rule.id }}<br>{{ rule.name }}</td><td>{{ rule.description }}</td><td>{{ '%.2f'|format(rule.activation|float) }} / 1.00</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+
+  <div class="actions"><a href="{{ url_for('assessment_history') }}">Back to history</a><a href="{{ url_for('index') }}">New assessment</a></div>
+</main>
+</body>
+</html>

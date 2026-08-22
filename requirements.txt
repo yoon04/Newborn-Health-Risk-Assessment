@@ -1,0 +1,11 @@
+Flask
+python-dotenv
+Flask-SQLAlchemy
+Flask-Migrate
+psycopg[binary]
+matplotlib
+numpy
+scipy
+pandas
+reportlab
+pypdf

@@ -4,14 +4,36 @@ import re
 import secrets
 from datetime import datetime
 
-from flask import Flask, render_template, request, send_file
+from dotenv import load_dotenv
+from flask import Flask, abort, render_template, request, send_file
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy.exc import SQLAlchemyError
 
+from extensions import db, migrate
 from fuzzy_logic import assess_risk, convert_weight_to_grams
+from models import Assessment
 from pdf_report import build_pdf_report
+from persistence import save_assessment
+
+# Load project-local configuration before reading DATABASE_URL and SECRET_KEY.
+# Existing environment variables remain authoritative (override=False).
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+database_url = os.environ.get('DATABASE_URL', '').strip()
+if database_url.startswith('postgres://'):
+    database_url = 'postgresql+psycopg://' + database_url[len('postgres://'):]
+elif database_url.startswith('postgresql://'):
+    database_url = 'postgresql+psycopg://' + database_url[len('postgresql://'):]
+if not database_url:
+    # A local SQLite fallback keeps the app importable for development/tests.
+    # Production deployments should always set DATABASE_URL to PostgreSQL.
+    database_url = 'sqlite:///:memory:'
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
+migrate.init_app(app, db)
 REPORT_TOKEN_MAX_AGE_SECONDS = 60 * 60
 
 if not os.path.exists('static'):
@@ -48,6 +70,9 @@ FAMILY_DISEASE_OPTIONS = (
 )
 OTHER_FAMILY_DISEASE = ('other_not_listed', 'Other disease / not listed')
 FAMILY_DISEASE_LABELS = dict((*FAMILY_DISEASE_OPTIONS, OTHER_FAMILY_DISEASE))
+MAX_USER_NAME_LENGTH = 120
+MAX_USER_EMAIL_LENGTH = 320
+USER_EMAIL_PATTERN = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 MIN_BIRTH_WEIGHT_G = 100
 MAX_BIRTH_WEIGHT_G = 6000
 DECIMAL_NUMBER_PATTERN = re.compile(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)')
@@ -134,6 +159,16 @@ def validate_submission(form):
     else:
         values['delivery_comp'] = int(raw_complication)
 
+    user_name = (form.get('user_name') or '').strip()
+    user_email = (form.get('user_email') or '').strip().lower()
+    if len(user_name) > MAX_USER_NAME_LENGTH or any(not character.isprintable() for character in user_name):
+        errors['user_name'] = 'Name must be 120 or fewer printable characters.'
+    if user_email and (
+        len(user_email) > MAX_USER_EMAIL_LENGTH
+        or not USER_EMAIL_PATTERN.fullmatch(user_email)
+    ):
+        errors['user_email'] = 'Enter a valid email address or leave it blank.'
+
     family_status = (form.get('family_history_status') or '').strip().lower()
     disease_choice = (form.get('family_disease') or '').strip().lower()
     affected_relative = (form.get('affected_relative') or '').strip().lower()
@@ -151,6 +186,8 @@ def validate_submission(form):
         'disease': FAMILY_DISEASE_LABELS.get(disease_choice, '') if family_status == 'yes' else '',
         'affected_relative': affected_relative if family_status == 'yes' and affected_relative in AFFECTED_RELATIVES else '',
     }
+    values['user_name'] = user_name
+    values['user_email'] = user_email
     return values, errors, []
 
 
@@ -283,6 +320,22 @@ def index():
             f"{values['weight_value']} {values['weight_unit']} "
             f"({values['birth_weight_g']:.0f}g)"
         )
+        results['assessment_id'] = None
+        if results.get('overall_risk_index') is not None:
+            try:
+                stored_assessment = save_assessment(
+                    values,
+                    results,
+                    request.form.to_dict(flat=True),
+                )
+                results['assessment_id'] = stored_assessment.id
+            except SQLAlchemyError:
+                db.session.rollback()
+                app.logger.exception('Assessment calculation succeeded but database save failed.')
+                results['storage_warning'] = (
+                    'The assessment was calculated, but it could not be saved. '
+                    'Check the database configuration and migrations.'
+                )
         report_payload = build_report_payload(values, results)
         results['pdf_report_token'] = _report_serializer().dumps(report_payload)
         return render_template('results.html', results=results)
@@ -311,6 +364,32 @@ def download_report():
         download_name='newborn_health_risk_summary.pdf',
         max_age=0,
     )
+
+
+@app.get('/assessments')
+def assessment_history():
+    try:
+        assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(100).all()
+    except SQLAlchemyError:
+        db.session.rollback()
+        return render_template(
+            'assessments.html',
+            assessments=[],
+            storage_error='Assessment history is unavailable until the database is configured and migrated.',
+        ), 503
+    return render_template('assessments.html', assessments=assessments, storage_error='')
+
+
+@app.get('/assessments/<int:assessment_id>')
+def assessment_detail(assessment_id):
+    try:
+        assessment = db.session.get(Assessment, assessment_id)
+    except SQLAlchemyError:
+        db.session.rollback()
+        return 'Assessment history is unavailable until the database is configured and migrated.', 503
+    if assessment is None:
+        abort(404)
+    return render_template('assessment_detail.html', assessment=assessment)
 
 if __name__ == '__main__':
     app.run(debug=True)
