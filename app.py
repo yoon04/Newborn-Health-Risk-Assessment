@@ -1,64 +1,316 @@
+import math
 import os
-from flask import Flask, render_template, request
-from fuzzy_logic import assess_risk, convert_weight_to_grams, INHERITANCE_MODES
+import re
+import secrets
+from datetime import datetime
+
+from flask import Flask, render_template, request, send_file
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+from fuzzy_logic import assess_risk, convert_weight_to_grams
+from pdf_report import build_pdf_report
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+REPORT_TOKEN_MAX_AGE_SECONDS = 60 * 60
 
 if not os.path.exists('static'):
     os.makedirs('static')
 
-COMMON_DISEASES = [
-    'Diabetes', 'Heart Disease', 'Hemoglobin E', 'Congenital Deafness',
-    'Muscular Dystrophy', 'Color Blindness', 'Other'
-]
+APGAR_FIELDS = ('appearance', 'pulse', 'grimace', 'activity', 'respiration')
+WEIGHT_UNITS = {'g', 'kg', 'lb'}
+CHILD_GENDERS = {'male', 'female'}
+DELIVERY_TYPES = {'vaginal', 'assisted', 'cesarean'}
+DELIVERY_COMPLICATIONS = {'0', '1'}
+FAMILY_HISTORY_STATUSES = {'yes', 'no', 'unknown'}
+AFFECTED_RELATIVES = {'father', 'mother', 'both_parents', 'other_family_member', 'unknown'}
+FAMILY_DISEASE_OPTIONS = (
+    ('asthma', 'Asthma'),
+    ('blood_clotting_disorder', 'Blood clotting disorder'),
+    ('breast_cancer', 'Breast cancer'),
+    ('colorectal_cancer', 'Colorectal cancer'),
+    ('congenital_heart_disease', 'Congenital heart disease'),
+    ('cystic_fibrosis', 'Cystic fibrosis'),
+    ('diabetes', 'Diabetes'),
+    ('epilepsy', 'Epilepsy or seizure disorder'),
+    ('familial_hypercholesterolemia', 'Familial high cholesterol'),
+    ('hemophilia', 'Hemophilia'),
+    ('high_blood_pressure', 'High blood pressure'),
+    ('heart_disease', 'Heart disease'),
+    ('kidney_disease', 'Kidney disease'),
+    ('muscular_dystrophy', 'Muscular dystrophy'),
+    ('ovarian_cancer', 'Ovarian cancer'),
+    ('prostate_cancer', 'Prostate cancer'),
+    ('sickle_cell_disease', 'Sickle cell disease'),
+    ('stroke', 'Stroke'),
+    ('thalassemia', 'Thalassemia'),
+    ('thyroid_cancer', 'Thyroid cancer'),
+)
+OTHER_FAMILY_DISEASE = ('other_not_listed', 'Other disease / not listed')
+FAMILY_DISEASE_LABELS = dict((*FAMILY_DISEASE_OPTIONS, OTHER_FAMILY_DISEASE))
+MIN_BIRTH_WEIGHT_G = 100
+MAX_BIRTH_WEIGHT_G = 6000
+DECIMAL_NUMBER_PATTERN = re.compile(r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)')
+
+
+def _parse_finite_number(raw_value):
+    """Return a finite float, or None for blank/malformed/non-finite input."""
+    value = (raw_value or '').strip()
+    if not value or not DECIMAL_NUMBER_PATTERN.fullmatch(value):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def validate_submission(form):
+    """Validate and normalize a submission before fuzzy processing."""
+    errors = {}
+    values = {}
+
+    for field in APGAR_FIELDS:
+        raw_value = (form.get(field) or '').strip()
+        if raw_value not in {'0', '1', '2'}:
+            errors[field] = 'Select an APGAR score of 0, 1, or 2.'
+        else:
+            values[field] = int(raw_value)
+
+    raw_week = (form.get('birth_week') or '').strip()
+    birth_week = _parse_finite_number(raw_week)
+    if birth_week is None:
+        errors['birth_week'] = 'Enter a valid gestational age.'
+    elif not 20 <= birth_week <= 45:
+        errors['birth_week'] = 'Gestational age must be between 20 and 45 weeks.'
+    elif not math.isclose(birth_week * 2, round(birth_week * 2), abs_tol=1e-9):
+        errors['birth_week'] = 'Gestational age must use half-week increments, such as 38 or 38.5.'
+    else:
+        values['birth_week'] = birth_week
+
+    raw_age = (form.get('maternal_age') or '').strip()
+    if not re.fullmatch(r'\d+', raw_age):
+        errors['maternal_age'] = 'Enter the mother\'s age as a whole number.'
+    else:
+        maternal_age = int(raw_age)
+        if not 12 <= maternal_age <= 60:
+            errors['maternal_age'] = 'Mother\'s age must be between 12 and 60 years.'
+        else:
+            values['maternal_age'] = maternal_age
+
+    child_gender = (form.get('child_gender') or '').strip().lower()
+    if child_gender not in CHILD_GENDERS:
+        errors['child_gender'] = 'Select the child\'s gender.'
+    else:
+        values['child_gender'] = child_gender
+
+    weight_unit = (form.get('weight_unit') or '').strip().lower()
+    raw_weight = (form.get('birth_weight') or '').strip()
+    weight_value = _parse_finite_number(raw_weight)
+    if weight_unit not in WEIGHT_UNITS:
+        errors['birth_weight'] = 'Select a valid birth-weight unit: g, kg, or lb.'
+    elif weight_value is None:
+        errors['birth_weight'] = 'Enter a valid birth weight.'
+    elif weight_value <= 0:
+        errors['birth_weight'] = 'Birth weight must be greater than zero.'
+    else:
+        birth_weight_g = convert_weight_to_grams(weight_value, weight_unit)
+        if not MIN_BIRTH_WEIGHT_G <= birth_weight_g < MAX_BIRTH_WEIGHT_G:
+            errors['birth_weight'] = 'Birth weight must convert to at least 100 g and less than 6,000 g.'
+        else:
+            values['weight_value'] = weight_value
+            values['weight_unit'] = weight_unit
+            values['birth_weight_g'] = birth_weight_g
+
+    delivery_type = (form.get('delivery_type') or '').strip().lower()
+    if delivery_type not in DELIVERY_TYPES:
+        errors['delivery_type'] = 'Select vaginal, assisted, or Cesarean delivery.'
+    else:
+        values['delivery_type'] = delivery_type
+
+    raw_complication = (form.get('delivery_comp') or '').strip()
+    if raw_complication not in DELIVERY_COMPLICATIONS:
+        errors['delivery_comp'] = 'Select whether a delivery complication occurred.'
+    else:
+        values['delivery_comp'] = int(raw_complication)
+
+    family_status = (form.get('family_history_status') or '').strip().lower()
+    disease_choice = (form.get('family_disease') or '').strip().lower()
+    affected_relative = (form.get('affected_relative') or '').strip().lower()
+
+    if family_status not in FAMILY_HISTORY_STATUSES:
+        errors['family_history_status'] = 'Select Yes, No, or Unknown for family disease history.'
+    elif family_status == 'yes':
+        if disease_choice not in FAMILY_DISEASE_LABELS:
+            errors['family_disease'] = 'Select a disease or choose Other disease / not listed.'
+        if affected_relative not in AFFECTED_RELATIVES:
+            errors['affected_relative'] = 'Select who has the disease.'
+
+    values['family_history'] = {
+        'status': family_status if family_status in FAMILY_HISTORY_STATUSES else '',
+        'disease': FAMILY_DISEASE_LABELS.get(disease_choice, '') if family_status == 'yes' else '',
+        'affected_relative': affected_relative if family_status == 'yes' and affected_relative in AFFECTED_RELATIVES else '',
+    }
+    return values, errors, []
+
+
+def render_assessment_form(errors=None, form_data=None, family_rows=None, status=200):
+    submitted_unit = (form_data or {}).get('weight_unit', 'lb')
+    display_weight_unit = submitted_unit if submitted_unit in WEIGHT_UNITS else 'lb'
+    return render_template(
+        'form.html',
+        errors=errors or {},
+        form_data=form_data or {},
+        family_rows=family_rows or [],
+        display_weight_unit=display_weight_unit,
+        family_disease_options=FAMILY_DISEASE_OPTIONS,
+        other_family_disease=OTHER_FAMILY_DISEASE,
+    ), status
+
+
+def _report_serializer():
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='newborn-pdf-report')
+
+
+def build_report_payload(values, results):
+    component_names = {
+        'appearance': 'Appearance',
+        'pulse': 'Pulse',
+        'grimace': 'Grimace',
+        'activity': 'Activity',
+        'respiration': 'Respiration',
+    }
+    components = []
+    for field in APGAR_FIELDS:
+        detail = results['component_detail'][field]
+        components.append({
+            'name': component_names[field],
+            'score': int(detail['score']),
+            'label': detail['label'],
+            'note': detail['note'],
+        })
+
+    family_conditions = [
+        {
+            'disease': item['disease'],
+            'affected_relative': item['affected_relative'],
+            'risk_index': float(item['risk_index']),
+        }
+        for item in results.get('family_history_items', [])
+    ]
+
+    return {
+        'generated_at': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z'),
+        'inputs': {
+            'birth_week': values['birth_week'],
+            'birth_weight': results['weight_display'],
+            'maternal_age': values['maternal_age'],
+            'child_gender': values['child_gender'].title(),
+            'delivery_type': results['delivery_type'],
+            'delivery_complication': results['delivery_complication'],
+            'family_history_status': values['family_history']['status'].title(),
+            'family_disease': values['family_history']['disease'],
+            'affected_relative': results['family_history_items'][0]['affected_relative'] if results['family_history_items'] else '',
+        },
+        'apgar': {
+            'components': components,
+            'total': int(results['apgar_score']),
+            'category': results['apgar_category'],
+            'breakdown': results['apgar_breakdown'],
+        },
+        'risk_modules': [
+            {
+                'name': 'Immediate Condition Risk',
+                'label': 'Immediate',
+                'risk_index': float(results['immediate_condition_risk_index']),
+                'level': results['immediate_condition_risk_level'],
+                'description': (
+                    'APGAR is the main signal. A reported complication raises concern most '
+                    'strongly when APGAR is already concerning.'
+                ),
+            },
+            {
+                'name': 'Birth-Related Risk',
+                'label': 'Birth Risk',
+                'risk_index': float(results['birth_related_risk_index']),
+                'level': results['birth_related_risk_level'],
+                'description': (
+                    'This module uses gestational age, birth weight, maternal age, and delivery '
+                    'information with overlapping fuzzy memberships.'
+                ),
+            },
+            {
+                'name': 'Family-History Risk',
+                'label': 'Family Risk',
+                'risk_index': float(results['family_history_risk_index']),
+                'level': results['family_history_risk_level'],
+                'description': results['family_history_summary'],
+            },
+        ],
+        'family_conditions': family_conditions,
+        'plot_paths': results['plot_paths'],
+        'overall_risk_index': float(results['overall_risk_index']),
+        'risk_level': results['risk_level'],
+        'confidence_level': results['confidence_level'],
+        'confidence_reasons': results['confidence_reasons'],
+        'main_contributing_factors': results['main_contributing_factors'],
+        'lower_impact_factors': results['lower_impact_factors'],
+        'triggered_rules': results['triggered_rules'],
+        'user_guidance': results['user_guidance'],
+        'family_history_summary': results['family_history_summary'],
+        'recommendation': results['recommendation'],
+    }
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        appearance  = int(request.form['appearance'])
-        pulse       = int(request.form['pulse'])
-        grimace     = int(request.form['grimace'])
-        activity    = int(request.form['activity'])
-        respiration = int(request.form['respiration'])
-        birth_week  = float(request.form['birth_week'])
-
-        weight_val  = float(request.form['birth_weight'])
-        weight_unit = request.form.get('weight_unit', 'lb')
-        birth_weight_g = convert_weight_to_grams(weight_val, weight_unit)
-
-        maternal_age  = int(request.form['maternal_age'])
-        child_gender  = request.form['child_gender'].strip().lower()
-        delivery_comp = int(request.form['delivery_comp'])
-
-        inherited_diseases = []
-        i = 0
-        while f'disease_{i}' in request.form:
-            disease = request.form[f'disease_{i}']
-            if disease == 'Other':
-                disease = request.form.get(f'other_disease_{i}', 'Unknown')
-            mode = request.form.get(f'mode_{i}', 'unknown')
-            xlinked_parent = request.form.get(f'xlinked_parent_{i}', 'mother')
-            xlinked_status = request.form.get(f'xlinked_status_{i}', 'carrier')
-            if disease.strip():
-                inherited_diseases.append({
-                    'disease': disease,
-                    'mode': mode,
-                    'xlinked_parent': xlinked_parent,
-                    'xlinked_status': xlinked_status,
-                })
-            i += 1
+        values, errors, family_rows = validate_submission(request.form)
+        if errors:
+            return render_assessment_form(
+                errors=errors,
+                form_data=request.form.to_dict(flat=True),
+                family_rows=family_rows,
+                status=400,
+            )
 
         results = assess_risk(
-            appearance, pulse, grimace, activity, respiration,
-            birth_week, birth_weight_g, maternal_age, delivery_comp,
-            inherited_diseases, child_gender
+            values['appearance'], values['pulse'], values['grimace'],
+            values['activity'], values['respiration'], values['birth_week'],
+            values['birth_weight_g'], values['maternal_age'], values['delivery_type'],
+            values['delivery_comp'], values['family_history'], values['child_gender'],
         )
-        results['weight_display'] = f"{weight_val} {weight_unit} ({birth_weight_g:.0f}g)"
+        results['weight_display'] = (
+            f"{values['weight_value']} {values['weight_unit']} "
+            f"({values['birth_weight_g']:.0f}g)"
+        )
+        report_payload = build_report_payload(values, results)
+        results['pdf_report_token'] = _report_serializer().dumps(report_payload)
         return render_template('results.html', results=results)
 
-    return render_template('form.html',
-                           common_diseases=COMMON_DISEASES,
-                           inheritance_modes=INHERITANCE_MODES)
+    return render_assessment_form()
+
+
+@app.post('/report.pdf')
+def download_report():
+    token = (request.form.get('report_token') or '').strip()
+    try:
+        report_payload = _report_serializer().loads(
+            token,
+            max_age=REPORT_TOKEN_MAX_AGE_SECONDS,
+        )
+    except SignatureExpired:
+        return 'This PDF download link has expired. Please run the assessment again.', 400
+    except BadSignature:
+        return 'The PDF report request is invalid. Please run the assessment again.', 400
+
+    pdf_stream = build_pdf_report(report_payload)
+    return send_file(
+        pdf_stream,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='newborn_health_risk_summary.pdf',
+        max_age=0,
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

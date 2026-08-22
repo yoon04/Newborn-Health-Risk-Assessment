@@ -85,26 +85,29 @@ def calculate_apgar(appearance, pulse, grimace, activity, respiration):
 
 def fuzzify_apgar(apgar):
     return {
-        'low':    trapezoidal_mf(apgar, 0, 0, 3, 4),
-        'medium': trapezoidal_mf(apgar, 3, 4, 6, 7),
-        'high':   trapezoidal_mf(apgar, 6, 7, 10, 10),
+        # The shoulders extend just beyond 0 and 10 so the extreme valid
+        # scores retain full membership. Wider transitions preserve overlap
+        # at the integer APGAR totals used by the assessment.
+        'low':    trapezoidal_mf(apgar, -0.1, 0, 3, 5),
+        'medium': trapezoidal_mf(apgar, 3, 4, 6, 8),
+        'high':   trapezoidal_mf(apgar, 6, 7, 10, 10.1),
     }
 
 def fuzzify_birth_week(week):
     return {
-        'very_preterm': trapezoidal_mf(week, 0, 0, 28, 32),
-        'preterm':      trapezoidal_mf(week, 28, 32, 34, 37),
-        'term':         trapezoidal_mf(week, 35, 37, 40, 42),
-        'postterm':     trapezoidal_mf(week, 40, 42, 44, 50),
+        'very_preterm': trapezoidal_mf(week, -0.1, 20, 28, 32),
+        'preterm':      trapezoidal_mf(week, 28, 32, 35, 37.5),
+        'term':         trapezoidal_mf(week, 35, 37, 40, 42.5),
+        'postterm':     trapezoidal_mf(week, 40, 42, 45, 50.1),
     }
 
 def fuzzify_birth_weight(w):
-    ext_low  = trapezoidal_mf(w, 0, 0, 800, 1000)
-    very_low = trapezoidal_mf(w, 800, 1000, 1200, 1500)
-    low      = trapezoidal_mf(w, 1200, 1500, 2000, 2500)
-    normal   = trapezoidal_mf(w, 2000, 2500, 3500, 4000)
-    high     = trapezoidal_mf(w, 3500, 4000, 4500, 5000)
-    very_high= trapezoidal_mf(w, 4500, 5000, 6000, 6000)
+    ext_low  = trapezoidal_mf(w, -0.1, 100, 800, 1200)
+    very_low = trapezoidal_mf(w, 800, 1000, 1300, 1700)
+    low      = trapezoidal_mf(w, 1200, 1600, 2200, 2800)
+    normal   = trapezoidal_mf(w, 2200, 2500, 3800, 4300)
+    high     = trapezoidal_mf(w, 3600, 4000, 4600, 5200)
+    very_high= trapezoidal_mf(w, 4500, 5000, 6000, 6000.1)
     return {
         'extremely_low': ext_low, 'very_low': very_low, 'low': low,
         'normal': normal, 'high': high, 'very_high': very_high,
@@ -142,7 +145,7 @@ INHERITANCE_MODES = {
         'base_prob': 0.50,
         'parent_signal': 0.7,
         'grandparent_signal': 0.0,
-        'explanation': 'One affected parent with dominant inheritance usually gives around a 50% risk.',
+        'explanation': 'One affected parent with dominant inheritance gives a baseline family-history index of 50 / 100.',
     },
     'dominant_none_parents_grandparent_yes': {
         'label': 'Dominant: parents unaffected, but grandparent had it',
@@ -156,14 +159,14 @@ INHERITANCE_MODES = {
         'base_prob': 0.25,
         'parent_signal': 0.6,
         'grandparent_signal': 0.0,
-        'explanation': 'Classic recessive pattern: if both parents are carriers, risk is about 25%.',
+        'explanation': 'Classic recessive pattern: two carrier parents give a baseline family-history index of 25 / 100.',
     },
     'recessive_one_parent_carrier': {
         'label': 'Recessive: only one parent is a carrier',
         'base_prob': 0.03,
         'parent_signal': 0.3,
         'grandparent_signal': 0.0,
-        'explanation': 'One carrier parent alone usually means very low chance of an affected baby.',
+        'explanation': 'One carrier parent alone usually produces a low family-history index.',
     },
     'recessive_none_parents_grandparent_yes': {
         'label': 'Recessive: parents unaffected, but grandparent had it',
@@ -249,11 +252,11 @@ MODE_SIMPLE_LABELS = {
 }
 
 MODE_SIMPLE_REASON = {
-    'dominant_both_parents': 'Both parents have this condition in the family, so the chance can be higher.',
-    'dominant_one_parent': 'One parent has this condition in the family, so there is still a clear chance.',
-    'dominant_none_parents_grandparent_yes': 'Parents are not affected, but family history from grandparents still adds some chance.',
+    'dominant_both_parents': 'Both parents have this condition in the family, so the family-history signal is stronger.',
+    'dominant_one_parent': 'One parent has this condition in the family, so there is a clear family-history signal.',
+    'dominant_none_parents_grandparent_yes': 'Parents are not affected, but grandparent history still adds a family-history signal.',
     'recessive_both_parents_carriers': 'Both parents carry this condition in the family, so risk is meaningful.',
-    'recessive_one_parent_carrier': 'Only one parent carries this condition, so chance is usually lower.',
+    'recessive_one_parent_carrier': 'Only one parent carries this condition, so the family-history signal is usually lower.',
     'recessive_none_parents_grandparent_yes': 'Grandparent history suggests this condition may still run in the family.',
     'complex': 'This condition can come from both family history and daily life factors, so the estimate is moderate.',
     'unknown': 'Because the family pattern is not clear, the estimate stays cautious.',
@@ -279,8 +282,8 @@ def inherited_level_label(prob):
     if prob < 0.15:
         return 'Low'
     if prob < 0.40:
-        return 'Medium'
-    return 'Higher'
+        return 'Moderate'
+    return 'High'
 
 
 def xlinked_simple_reason(child_gender, parent, status):
@@ -290,12 +293,12 @@ def xlinked_simple_reason(child_gender, parent, status):
 
     if p == 'mother':
         if s == 'affected':
-            return 'This was marked on the mother side, and mother has the condition, so chance can be higher.'
-        return 'This was marked on the mother side, and mother carries it in the family, so there is still a clear chance.'
+            return 'This was marked on the mother side, and mother has the condition, so the family-history signal can be stronger.'
+        return 'This was marked on the mother side, and mother carries it in the family, so there is still a clear family-history signal.'
 
     if g == 'male':
-        return 'This was marked on the father side, and for a boy this path usually lowers the chance.'
-    return 'This was marked on the father side, and for a girl this path can raise the chance.'
+        return 'This was marked on the father side, and for a boy this path usually lowers the family-history signal.'
+    return 'This was marked on the father side, and for a girl this path can raise the family-history signal.'
 
 
 def fuzzify_genetic_base(base_prob):
@@ -365,12 +368,12 @@ def xlinked_inheritance_profile(child_gender, parent, status):
             parent_signal = 1.0
         else:
             base_prob = 0.5
-            reason = 'Mother is a carrier, so each child has about a 50% chance to inherit the mutation.'
+            reason = 'Mother is a carrier, producing a baseline inheritance index of 50 / 100 for this model.'
             parent_signal = 0.7
     else:
         if s == 'carrier':
             base_prob = 1.0 if g == 'female' else 0.0
-            reason = 'Father cannot be a typical carrier in X-linked recessive patterns; treated as affected for inheritance probability.'
+            reason = 'Father cannot be a typical carrier in X-linked recessive patterns; the model treats this status as affected.'
             parent_signal = 0.75
         else:
             base_prob = 1.0 if g == 'female' else 0.0
@@ -419,16 +422,19 @@ def estimate_inherited_prob(diseases, child_gender):
             gp_signal,
         )
         fuzzy_prob = defuzzify_genetic_risk(fuzzy_levels, base_prob)
+        risk_index = float(fuzzy_prob * 100)
         guide = disease_guide(d.get('disease', 'Unknown'))
         simple_risk_level = inherited_level_label(fuzzy_prob)
         probs_list.append({
             'disease': d['disease'],
             'base_prob': base_prob,
             'fuzzy_prob': fuzzy_prob,
+            'base_risk_index': float(base_prob * 100),
+            'risk_index': risk_index,
             'expl': (
                 f"{d['disease']}: {mode_explanation} "
-                f"Base estimate {base_prob*100:.0f}% adjusted by fuzzy family-history rules "
-                f"to {fuzzy_prob*100:.1f}%."
+                f"Baseline index {base_prob*100:.0f} / 100 adjusted by fuzzy family-history rules "
+                f"to {risk_index:.1f} / 100."
             ),
             'mode_label': info['label'],
             'mode_display_label': mode_display_label,
@@ -440,70 +446,431 @@ def estimate_inherited_prob(diseases, child_gender):
         })
         explanations.append(
             f"{d['disease']}: {mode_explanation} "
-            f"(base {base_prob*100:.0f}%, fuzzy-adjusted {fuzzy_prob*100:.1f}%)."
+            f"(baseline index {base_prob*100:.0f} / 100, fuzzy-adjusted index {risk_index:.1f} / 100)."
         )
     explanation = "; ".join(explanations) if explanations else "No inherited diseases noted."
     return probs_list, explanation
 
+
+def apply_family_history_rules(family_history, return_rules=False):
+    """Create a fuzzy family-history indicator from non-technical user input."""
+    status = family_history.get('status', 'unknown')
+    relative = family_history.get('affected_relative', '')
+    is_no = 1.0 if status == 'no' else 0.0
+    is_unknown = 1.0 if status == 'unknown' else 0.0
+    is_yes = 1.0 if status == 'yes' else 0.0
+
+    rules = [
+        _rule('FH-01', 'Family History', 'No known family disease',
+              'No known family disease supports a low family-history contribution.',
+              'low', is_no),
+        _rule('FH-02', 'Family History', 'Family history unknown - low component',
+              'Unknown family history keeps a smaller low contribution because no affected relative is confirmed.',
+              'low', 0.45 * is_unknown),
+        _rule('FH-03', 'Family History', 'Family history unknown - uncertain component',
+              'Unknown family history activates a moderate contribution and lowers assessment confidence.',
+              'moderate', 0.55 * is_unknown),
+        _rule('FH-04', 'Family History', 'Father affected',
+              'A known disease in the father elevates the family-history indicator.',
+              'moderate', is_yes if relative == 'father' else 0.0),
+        _rule('FH-05', 'Family History', 'Mother affected',
+              'A known disease in the mother elevates the family-history indicator.',
+              'moderate', is_yes if relative == 'mother' else 0.0),
+        _rule('FH-06', 'Family History', 'Both parents affected',
+              'A known disease affecting both parents creates a stronger family-history indicator.',
+              'high', is_yes if relative == 'both_parents' else 0.0),
+        _rule('FH-07', 'Family History', 'Other family member affected',
+              'A known disease in another family member creates a smaller moderate contribution.',
+              'moderate', 0.75 * is_yes if relative == 'other_family_member' else 0.0),
+        _rule('FH-08', 'Family History', 'Affected relative unknown',
+              'A known disease with an unknown affected relative creates an uncertain moderate contribution.',
+              'moderate', 0.65 * is_yes if relative == 'unknown' else 0.0),
+        _rule('FH-09', 'Family History', 'Distant-family low component',
+              'An affected non-parent family member retains a smaller low contribution.',
+              'low', 0.25 * is_yes if relative == 'other_family_member' else 0.0),
+        _rule('FH-10', 'Family History', 'Unknown-relative low component',
+              'Unknown affected-relative information retains a smaller low contribution.',
+              'low', 0.35 * is_yes if relative == 'unknown' else 0.0),
+    ]
+    levels = _aggregate_rule_levels(rules)
+    return (levels, rules) if return_rules else levels
+
+
+def family_history_message(family_history, family_history_risk_index):
+    status = family_history.get('status', 'unknown')
+    relative = family_history.get('affected_relative', '')
+    if status == 'no':
+        return 'No known family disease was reported, so family history has a low contribution.'
+    if status == 'unknown':
+        return 'Family disease history is unknown, so this part of the assessment is less certain.'
+    if relative == 'both_parents':
+        return 'A disease was reported in both parents, so family history may need additional attention.'
+    if relative in ('father', 'mother'):
+        return 'A disease was reported in one parent, so family history may need additional attention.'
+    if relative == 'other_family_member':
+        return 'A disease was reported in another family member, creating a smaller family-history concern.'
+    return 'A family disease was reported, but who has it is unknown, so this part is less certain.'
+
  
-def apply_rules(fi):
-    apgar  = fi['apgar']
-    week   = fi['birth_week']
+def _rule(rule_id, module, name, description, outcome, activation):
+    return {
+        'id': rule_id,
+        'module': module,
+        'name': name,
+        'description': description,
+        'outcome': outcome,
+        'activation': float(activation),
+    }
+
+
+def _aggregate_rule_levels(rules):
+    return {
+        outcome: max(
+            (rule['activation'] for rule in rules if rule['outcome'] == outcome),
+            default=0.0,
+        )
+        for outcome in ('low', 'moderate', 'high')
+    }
+
+
+def apply_immediate_condition_rules(fi, return_rules=False):
+    """Immediate condition module: APGAR plus reported delivery complication."""
+    apgar = fi['apgar']
+    comp = fi['delivery_comp']
+    rules = [
+        _rule('IM-01', 'Immediate Condition', 'Stable APGAR without complication',
+              'Stable APGAR and no reported delivery complication support a low immediate risk level.',
+              'low', min(apgar['high'], comp['normal'])),
+        _rule('IM-02', 'Immediate Condition', 'Concerning APGAR',
+              'A concerning APGAR activates the moderate immediate risk level.',
+              'moderate', apgar['medium']),
+        _rule('IM-03', 'Immediate Condition', 'Stable APGAR with complication',
+              'A reported delivery complication can elevate immediate risk even when APGAR is stable.',
+              'moderate', min(apgar['high'], comp['complicated'])),
+        _rule('IM-04', 'Immediate Condition', 'Critical APGAR',
+              'A critical APGAR activates the high immediate risk level.',
+              'high', apgar['low']),
+        _rule('IM-05', 'Immediate Condition', 'Concerning APGAR with complication',
+              'Concerning APGAR together with a reported delivery complication activates high immediate risk.',
+              'high', min(apgar['medium'], comp['complicated'])),
+    ]
+    levels = _aggregate_rule_levels(rules)
+    return (levels, rules) if return_rules else levels
+
+
+def apply_birth_related_rules(fi, return_rules=False):
+    """Birth module: gestation, weight, maternal age, and complication context."""
+    week = fi['birth_week']
     weight = fi['birth_weight']
-    age    = fi['maternal_age']
-    comp   = fi['delivery_comp']
+    age = fi['maternal_age']
+    comp = fi['delivery_comp']
 
-    high_rules = [
-        apgar['low'],
-        min(apgar['low'], week['preterm']),
-        min(apgar['low'], week['very_preterm']),
-        min(apgar['low'], weight['any_low']),
-        min(apgar['low'], comp['complicated']),
-        min(apgar['low'], age['any_young']),
-        min(apgar['low'], age['any_advanced']),
-        min(apgar['medium'], week['preterm'], comp['complicated']),
-        min(apgar['medium'], weight['extremely_low']),
-        min(apgar['medium'], week['very_preterm']),
-        week['very_preterm'],
-        min(week['very_preterm'], weight['any_low']),
-        min(week['preterm'], weight['any_low']),
-        min(week['preterm'], comp['complicated']),
-        min(week['very_preterm'], comp['complicated']),
-        min(week['postterm'], comp['complicated']),
-        min(week['postterm'], weight['any_high']),
-        weight['extremely_low'],
-        weight['very_low'],
-        weight['very_high'],
-        min(weight['any_high'], week['preterm']),
-        min(weight['any_low'], comp['complicated']),
-        age['very_advanced'],
-        min(age['advanced'], comp['complicated']),
-        min(age['very_young'], comp['complicated']),
-        min(age['any_advanced'], apgar['low']),
-        min(age['advanced'], weight['any_high']),
-        min(age['any_young'], week['preterm']),
-        min(apgar['low'], week['very_preterm'], weight['any_low']),
-        min(apgar['medium'], week['preterm'], weight['low'], comp['complicated']),
+    rules = [
+        _rule('BR-01', 'Birth-Related', 'Very preterm gestation', 'Very preterm gestational age activates high birth-related risk.', 'high', week['very_preterm']),
+        _rule('BR-02', 'Birth-Related', 'Extremely low birth weight', 'Extremely low birth weight activates high birth-related risk.', 'high', weight['extremely_low']),
+        _rule('BR-03', 'Birth-Related', 'Very low birth weight', 'Very low birth weight activates high birth-related risk.', 'high', weight['very_low']),
+        _rule('BR-04', 'Birth-Related', 'Very high birth weight', 'Very high birth weight activates high birth-related risk.', 'high', weight['very_high']),
+        _rule('BR-05', 'Birth-Related', 'Very advanced maternal age', 'Very advanced maternal age activates high birth-related risk.', 'high', age['very_advanced']),
+        _rule('BR-06', 'Birth-Related', 'Preterm with low birth weight', 'Preterm gestation together with low birth weight elevates birth-related risk.', 'high', min(week['preterm'], weight['any_low'])),
+        _rule('BR-07', 'Birth-Related', 'Post-term with high birth weight', 'Post-term gestation together with high birth weight elevates birth-related risk.', 'high', min(week['postterm'], weight['any_high'])),
+        _rule('BR-08', 'Birth-Related', 'Complication with a birth concern', 'A reported delivery complication combines with gestational age, weight, or maternal-age concerns.', 'high', min(comp['complicated'], max(week['preterm'], weight['any_low'], weight['any_high'], age['any_advanced']))),
+        _rule('BR-09', 'Birth-Related', 'Preterm gestation', 'Preterm gestational age activates moderate birth-related risk.', 'moderate', week['preterm']),
+        _rule('BR-10', 'Birth-Related', 'Post-term gestation', 'Post-term gestational age activates moderate birth-related risk.', 'moderate', week['postterm']),
+        _rule('BR-11', 'Birth-Related', 'Low birth weight', 'Low birth weight activates moderate birth-related risk.', 'moderate', weight['low']),
+        _rule('BR-12', 'Birth-Related', 'High birth weight', 'High birth weight activates moderate birth-related risk.', 'moderate', weight['high']),
+        _rule('BR-13', 'Birth-Related', 'Young maternal age', 'Young maternal age activates moderate birth-related risk.', 'moderate', age['any_young']),
+        _rule('BR-14', 'Birth-Related', 'Advanced maternal age', 'Advanced maternal age activates moderate birth-related risk.', 'moderate', age['advanced']),
+        _rule('BR-15', 'Birth-Related', 'Reported delivery complication', 'A reported delivery complication activates moderate birth-related risk.', 'moderate', comp['complicated']),
+        _rule('BR-16', 'Birth-Related', 'Term, normal weight, no complication', 'Term gestation, normal birth weight, and no reported complication support low birth-related risk.', 'low', min(week['term'], weight['normal'], comp['normal'])),
+        _rule('BR-17', 'Birth-Related', 'Term, normal weight, typical maternal age', 'Term gestation, normal birth weight, and typical maternal age support low birth-related risk.', 'low', min(week['term'], weight['normal'], age['normal'])),
     ]
-    high_risk = max(high_rules)
+    levels = _aggregate_rule_levels(rules)
+    return (levels, rules) if return_rules else levels
 
-    low_rules = [
-        min(apgar['high'], week['term'], weight['normal'], comp['normal']),
-        min(apgar['high'], week['term']),
-        min(apgar['high'], comp['normal']),
-        min(apgar['high'], age['normal']),
-        min(apgar['high'], weight['normal']),
-        min(apgar['medium'], week['term'], weight['normal'], comp['normal']),
-        min(age['normal'], comp['normal'], week['term'], weight['normal']),
-        min(week['term'], comp['normal'], age['normal']),
-        min(weight['normal'], age['normal'], comp['normal']),
-        min(week['term'], weight['normal']),
+
+def risk_output_curves(risk_levels):
+    """Clip overlapping low/moderate/high output sets by rule strength."""
+    x_risk = np.linspace(0, 100, 1001)
+    low_shape = np.clip((50 - x_risk) / 25, 0, 1)
+    moderate_shape = np.clip(np.minimum((x_risk - 25) / 25, (75 - x_risk) / 25), 0, 1)
+    high_shape = np.clip((x_risk - 50) / 25, 0, 1)
+    low_mf = np.minimum(low_shape, risk_levels['low'])
+    moderate_mf = np.minimum(moderate_shape, risk_levels['moderate'])
+    high_mf = np.minimum(high_shape, risk_levels['high'])
+    combined = np.maximum(low_mf, np.maximum(moderate_mf, high_mf))
+    return x_risk, low_mf, moderate_mf, high_mf, combined
+
+
+def defuzzify_risk(risk_levels):
+    x_risk, _low, _moderate, _high, combined = risk_output_curves(risk_levels)
+    denominator = simpson(combined, x=x_risk)
+    if denominator <= 0:
+        return 0.0
+    return float(simpson(x_risk * combined, x=x_risk) / denominator)
+
+
+def fuzzify_risk_index(risk_index):
+    """Fuzzify a module's 0-100 index for hierarchical inference."""
+    return {
+        'low': trapezoidal_mf(risk_index, -0.1, 0, 25, 50),
+        'moderate': trapezoidal_mf(risk_index, 25, 40, 60, 75),
+        'high': trapezoidal_mf(risk_index, 50, 75, 100, 100.1),
+    }
+
+
+def apply_hierarchical_risk_rules(immediate_index, birth_index, family_index, return_rules=False):
+    """Combine module indices using fuzzy rules rather than numeric weights."""
+    immediate = fuzzify_risk_index(immediate_index)
+    birth = fuzzify_risk_index(birth_index)
+    family = fuzzify_risk_index(family_index)
+
+    rules = [
+        _rule('HR-01', 'Overall Hierarchy', 'All modules low', 'Low immediate, birth-related, and family-history indices support low overall risk.', 'low', min(immediate['low'], birth['low'], family['low'])),
+        _rule('HR-02', 'Overall Hierarchy', 'Moderate immediate risk', 'Moderate immediate risk keeps the overall result at least moderate.', 'moderate', immediate['moderate']),
+        _rule('HR-03', 'Overall Hierarchy', 'Moderate birth-related risk', 'Moderate birth-related risk keeps the overall result at least moderate.', 'moderate', birth['moderate']),
+        _rule('HR-04', 'Overall Hierarchy', 'Moderate family-history risk', 'Moderate family-history risk keeps the overall result at least moderate.', 'moderate', family['moderate']),
+        _rule('HR-05', 'Overall Hierarchy', 'High immediate risk persists', 'High immediate risk cannot be cancelled by lower birth-related or family-history indices.', 'high', immediate['high']),
+        _rule('HR-06', 'Overall Hierarchy', 'High birth-related risk persists', 'High birth-related risk remains elevated even when family-history risk is low.', 'high', birth['high']),
+        _rule('HR-07', 'Overall Hierarchy', 'High family-history risk persists', 'High family-history risk activates high overall risk.', 'high', family['high']),
+        _rule('HR-08', 'Overall Hierarchy', 'Moderate immediate and birth risks', 'Moderate immediate and birth-related risks together activate high overall risk.', 'high', min(immediate['moderate'], birth['moderate'])),
+        _rule('HR-09', 'Overall Hierarchy', 'High immediate with moderate birth risk', 'High immediate risk with moderate birth-related risk activates high overall risk.', 'high', min(immediate['high'], birth['moderate'])),
+        _rule('HR-10', 'Overall Hierarchy', 'Moderate immediate with high birth risk', 'Moderate immediate risk with high birth-related risk activates high overall risk.', 'high', min(immediate['moderate'], birth['high'])),
     ]
-    low_risk = max(low_rules)
-    mod_risk = max(0, 1 - (high_risk + low_risk) / 2)
-    return {'low': low_risk, 'moderate': mod_risk, 'high': high_risk}
+    levels = _aggregate_rule_levels(rules)
+    return (levels, rules) if return_rules else levels
 
-def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_probs_list):
+
+def risk_level_for_index(risk_index):
+    if risk_index < 30:
+        return 'Low'
+    if risk_index < 70:
+        return 'Moderate'
+    return 'High'
+
+
+def select_important_rules(rule_traces, limit=10):
+    """Return the strongest activated rules without changing fuzzy inference."""
+    active = [rule.copy() for rule in rule_traces if rule['activation'] > 0.01]
+    outcome_priority = {'high': 2, 'moderate': 1, 'low': 0}
+    active.sort(
+        key=lambda rule: (rule['activation'], outcome_priority[rule['outcome']]),
+        reverse=True,
+    )
+    return active[:limit]
+
+
+def calculate_assessment_confidence(final_risk_levels, important_inputs_complete, family_history):
+    """Grade result confidence from input completeness and fuzzy activation clarity."""
+    activations = sorted((float(value) for value in final_risk_levels.values()), reverse=True)
+    strongest = activations[0] if activations else 0.0
+    runner_up = activations[1] if len(activations) > 1 else 0.0
+    separation = strongest - runner_up
+    unknown_family_history = (
+        family_history.get('status') == 'unknown'
+        or (
+            family_history.get('status') == 'yes'
+            and family_history.get('affected_relative') == 'unknown'
+        )
+    )
+
+    if not important_inputs_complete:
+        level = 'Low'
+    elif strongest >= 0.75 and separation >= 0.25:
+        level = 'High'
+    elif strongest >= 0.40 and separation >= 0.10:
+        level = 'Moderate'
+    else:
+        level = 'Low'
+
+    if unknown_family_history and level == 'High':
+        level = 'Moderate'
+
+    reasons = []
+    reasons.append(
+        'All important inputs were complete and valid.'
+        if important_inputs_complete
+        else 'One or more important inputs were incomplete.'
+    )
+    reasons.append(
+        'At least one family-history inheritance pattern was marked unknown.'
+        if unknown_family_history
+        else 'Family-history information was either specified or no condition was reported.'
+    )
+    if strongest >= 0.75 and separation >= 0.25:
+        reasons.append('The strongest final fuzzy level was clearly separated from the alternatives.')
+    elif strongest >= 0.40 and separation >= 0.10:
+        reasons.append('The final fuzzy levels showed a usable but not strong separation.')
+    else:
+        reasons.append('The final fuzzy levels overlapped substantially, so the interpretation is less certain.')
+
+    return {
+        'level': level,
+        'reasons': reasons,
+        'strongest_activation': strongest,
+        'activation_separation': separation,
+    }
+
+
+def _dominant_membership(memberships, keys):
+    key = max(keys, key=lambda item: memberships[item])
+    return key, float(memberships[key])
+
+
+def identify_assessment_factors(fuzzy_inputs, family_history_risk_index, family_history):
+    """Summarize input signals; strengths rank factors but are not contribution shares."""
+    factors = []
+
+    apgar_key, apgar_strength = _dominant_membership(fuzzy_inputs['apgar'], ('low', 'medium', 'high'))
+    apgar_text = {
+        'low': ('Critical APGAR pattern', 'The APGAR memberships lean toward the critical range.', 'impact'),
+        'medium': ('Concerning APGAR pattern', 'The APGAR memberships lean toward the concerning range.', 'impact'),
+        'high': ('Stable APGAR pattern', 'The APGAR memberships lean toward the stable range.', 'lowering'),
+    }[apgar_key]
+    factors.append({'name': apgar_text[0], 'description': apgar_text[1], 'role': apgar_text[2], 'strength': apgar_strength})
+
+    week_key, week_strength = _dominant_membership(
+        fuzzy_inputs['birth_week'], ('very_preterm', 'preterm', 'term', 'postterm')
+    )
+    week_text = {
+        'very_preterm': ('Very preterm gestational age', 'Gestational-age membership is strongest in the very preterm set.', 'impact'),
+        'preterm': ('Preterm gestational age', 'Gestational-age membership is strongest in the preterm set.', 'impact'),
+        'term': ('Term gestational age', 'Gestational-age membership is strongest in the term set.', 'lowering'),
+        'postterm': ('Post-term gestational age', 'Gestational-age membership is strongest in the post-term set.', 'impact'),
+    }[week_key]
+    factors.append({'name': week_text[0], 'description': week_text[1], 'role': week_text[2], 'strength': week_strength})
+
+    weight_key, weight_strength = _dominant_membership(
+        fuzzy_inputs['birth_weight'], ('extremely_low', 'very_low', 'low', 'normal', 'high', 'very_high')
+    )
+    weight_text = {
+        'extremely_low': ('Extremely low birth weight', 'Birth-weight membership is strongest in the extremely low set.', 'impact'),
+        'very_low': ('Very low birth weight', 'Birth-weight membership is strongest in the very low set.', 'impact'),
+        'low': ('Low birth weight', 'Birth-weight membership is strongest in the low set.', 'impact'),
+        'normal': ('Normal birth weight', 'Birth-weight membership is strongest in the normal set.', 'lowering'),
+        'high': ('High birth weight', 'Birth-weight membership is strongest in the high set.', 'impact'),
+        'very_high': ('Very high birth weight', 'Birth-weight membership is strongest in the very high set.', 'impact'),
+    }[weight_key]
+    factors.append({'name': weight_text[0], 'description': weight_text[1], 'role': weight_text[2], 'strength': weight_strength})
+
+    age_key, age_strength = _dominant_membership(
+        fuzzy_inputs['maternal_age'], ('very_young', 'young', 'normal', 'advanced', 'very_advanced')
+    )
+    age_text = {
+        'very_young': ('Very young maternal age', 'Maternal-age membership is strongest in the very young set.', 'impact'),
+        'young': ('Young maternal age', 'Maternal-age membership is strongest in the young set.', 'impact'),
+        'normal': ('Typical maternal age range', 'Maternal-age membership is strongest in the typical range.', 'lowering'),
+        'advanced': ('Advanced maternal age', 'Maternal-age membership is strongest in the advanced set.', 'impact'),
+        'very_advanced': ('Very advanced maternal age', 'Maternal-age membership is strongest in the very advanced set.', 'impact'),
+    }[age_key]
+    factors.append({'name': age_text[0], 'description': age_text[1], 'role': age_text[2], 'strength': age_strength})
+
+    complication_strength = float(fuzzy_inputs['delivery_comp']['complicated'])
+    if complication_strength > 0:
+        factors.append({'name': 'Reported delivery complication', 'description': 'A delivery complication was reported separately from delivery type.', 'role': 'impact', 'strength': complication_strength})
+    else:
+        factors.append({'name': 'No reported delivery complication', 'description': 'Delivery type alone does not add a complication signal.', 'role': 'lowering', 'strength': float(fuzzy_inputs['delivery_comp']['normal'])})
+
+    family_level = risk_level_for_index(family_history_risk_index)
+    if family_history.get('status') == 'yes':
+        factors.append({
+            'name': 'Known family disease',
+            'description': family_history_message(family_history, family_history_risk_index),
+            'role': 'lowering' if family_level == 'Low' else 'impact',
+            'strength': max(fuzzify_risk_index(family_history_risk_index).values()),
+        })
+    elif family_history.get('status') == 'unknown':
+        factors.append({
+            'name': 'Family disease history is unknown',
+            'description': 'Unknown family history adds uncertainty and may need clarification with a healthcare professional.',
+            'role': 'impact',
+            'strength': max(fuzzify_risk_index(family_history_risk_index).values()),
+        })
+    else:
+        factors.append({'name': 'No known family disease', 'description': 'No known family disease was reported.', 'role': 'lowering', 'strength': 1.0})
+
+    impact_factors = sorted(
+        (factor for factor in factors if factor['role'] == 'impact'),
+        key=lambda factor: factor['strength'], reverse=True,
+    )
+    lowering_factors = sorted(
+        (factor for factor in factors if factor['role'] == 'lowering'),
+        key=lambda factor: factor['strength'], reverse=True,
+    )
+    main = impact_factors[:3]
+    if len(main) < 3:
+        main.extend(lowering_factors[:3 - len(main)])
+    main_names = {factor['name'] for factor in main}
+    lower_impact = [factor for factor in factors if factor['name'] not in main_names]
+    lower_impact.sort(key=lambda factor: factor['strength'], reverse=True)
+    return main, lower_impact
+
+
+def build_user_guidance(risk_level, main_factors, lower_impact_factors):
+    summaries = {
+        'Low': 'The information entered does not highlight a major concern, but normal newborn observation and checkups are still important.',
+        'Moderate': 'A few factors in the information entered may need closer attention and follow-up.',
+        'High': 'Several entered factors suggest that prompt professional medical evaluation is important.',
+    }
+    actions = {
+        'Low': [
+            'Continue normal newborn care and routine checkups.',
+            'Keep observing feeding, breathing, temperature, and activity.',
+            'Contact a healthcare professional if anything seems unusual.',
+        ],
+        'Moderate': [
+            'Arrange or continue follow-up with a healthcare professional.',
+            'Pay closer attention to the factors highlighted in this assessment.',
+            'Do not rely on this result alone for medical decisions.',
+        ],
+        'High': [
+            'Seek prompt professional medical evaluation.',
+            'Do not wait for this application to confirm or rule out a diagnosis.',
+            'Keep the baby under close observation while following professional advice.',
+        ],
+    }
+    notice_text = {
+        'Very preterm gestational age': 'Baby was born much earlier than expected.',
+        'Preterm gestational age': 'Baby was born earlier than expected.',
+        'Post-term gestational age': 'Baby was born later than the usual term range.',
+        'Extremely low birth weight': 'Birth weight is much lower than the usual range.',
+        'Very low birth weight': 'Birth weight is well below the usual range.',
+        'Low birth weight': 'Birth weight is lower than the usual range.',
+        'High birth weight': 'Birth weight is above the usual range.',
+        'Very high birth weight': 'Birth weight is well above the usual range.',
+        'Critical APGAR pattern': 'The APGAR result needs urgent professional attention.',
+        'Concerning APGAR pattern': 'The APGAR result may need closer attention.',
+        'Very young maternal age': "Mother's age may add a pregnancy-related concern.",
+        'Young maternal age': "Mother's age may add a pregnancy-related concern.",
+        'Advanced maternal age': "Mother's age may add a pregnancy-related concern.",
+        'Very advanced maternal age': "Mother's age may add a pregnancy-related concern.",
+        'Reported delivery complication': 'A delivery complication was reported.',
+        'Known family disease': 'Family history may need additional attention.',
+        'Family disease history is unknown': 'Family disease history is unknown and may need clarification.',
+    }
+    ordered_factors = main_factors + lower_impact_factors
+    notices = []
+    for factor in ordered_factors:
+        if factor.get('role') != 'impact':
+            continue
+        notice = notice_text.get(factor.get('name'))
+        if notice and notice not in notices:
+            notices.append(notice)
+    if not notices:
+        notices.append('No major concern was highlighted by the information entered.')
+
+    return {
+        'short_summary': summaries[risk_level],
+        'main_notices': notices[:4],
+        'next_steps': actions[risk_level],
+        'urgent_help_signs': [
+            'The baby stops breathing, has serious difficulty breathing, or looks blue, very pale, or grey.',
+            'The baby is difficult to wake, unusually inactive, floppy, or unresponsive.',
+            'The baby is not feeding normally and you are worried.',
+            'The baby has a fever, feels unusually hot or cold, or has a seizure or fit.',
+        ],
+    }
+
+def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, family_history_items):
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
     os.makedirs(static_dir, exist_ok=True)
     plots = {}
@@ -534,29 +901,29 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
 
     x = np.linspace(0, 10, 500)
     save_fig(x, [
-        ('Low (0–3)',    [trapezoidal_mf(v,0,0,3,4) for v in x],     '#ef4444'),
-        ('Medium (4–6)', [trapezoidal_mf(v,3,4,6,7) for v in x],    '#f59e0b'),
-        ('High (7–10)', [trapezoidal_mf(v,6,7,10,10) for v in x],   '#22c55e'),
+        ('Low (0–3)',    [trapezoidal_mf(v,-0.1,0,3,5) for v in x],    '#ef4444'),
+        ('Medium (4–6)', [trapezoidal_mf(v,3,4,6,8) for v in x],       '#f59e0b'),
+        ('High (7–10)',  [trapezoidal_mf(v,6,7,10,10.1) for v in x],  '#22c55e'),
     ], "Baby's APGAR Score Interpretation", "APGAR Score (0–10)", "apgar_fuzzy.png", actual_values['apgar'])
     plots['apgar'] = 'static/apgar_fuzzy.png'
 
     x = np.linspace(20, 46, 500)
     save_fig(x, [
-        ('Very Preterm (<28w)', [trapezoidal_mf(v,0,0,28,32) for v in x],    '#7f1d1d'),
-        ('Preterm (28–37w)',    [trapezoidal_mf(v,28,32,34,37) for v in x],  '#ef4444'),
-        ('Term (37–42w)',       [trapezoidal_mf(v,35,37,40,42) for v in x],  '#22c55e'),
-        ('Post-term (>42w)',    [trapezoidal_mf(v,40,42,44,50) for v in x],  '#f59e0b'),
+        ('Very Preterm (<28w)', [trapezoidal_mf(v,-0.1,20,28,32) for v in x],    '#7f1d1d'),
+        ('Preterm (28–37w)',    [trapezoidal_mf(v,28,32,35,37.5) for v in x],   '#ef4444'),
+        ('Term (37–42w)',       [trapezoidal_mf(v,35,37,40,42.5) for v in x],   '#22c55e'),
+        ('Post-term (>42w)',    [trapezoidal_mf(v,40,42,45,50.1) for v in x],  '#f59e0b'),
     ], "Gestational Age Interpretation", "Weeks of Pregnancy", "week_fuzzy.png", actual_values['week'])
     plots['week'] = 'static/week_fuzzy.png'
 
     x = np.linspace(400, 5500, 500)
     save_fig(x, [
-        ('Extremely Low (<1kg)', [trapezoidal_mf(v,0,0,800,1000) for v in x],      '#7f1d1d'),
-        ('Very Low (1–1.5kg)',   [trapezoidal_mf(v,800,1000,1200,1500) for v in x],'#ef4444'),
-        ('Low (1.5–2.5kg)',      [trapezoidal_mf(v,1200,1500,2000,2500) for v in x],'#f97316'),
-        ('Normal (2.5–4kg)',     [trapezoidal_mf(v,2000,2500,3500,4000) for v in x],'#22c55e'),
-        ('High (4–4.5kg)',       [trapezoidal_mf(v,3500,4000,4500,5000) for v in x],'#f59e0b'),
-        ('Very High (>4.5kg)',   [trapezoidal_mf(v,4500,5000,6000,6000) for v in x],'#ef4444'),
+        ('Extremely Low (<1kg)', [trapezoidal_mf(v,-0.1,100,800,1200) for v in x],     '#7f1d1d'),
+        ('Very Low (1–1.5kg)',   [trapezoidal_mf(v,800,1000,1300,1700) for v in x],    '#ef4444'),
+        ('Low (1.5–2.5kg)',      [trapezoidal_mf(v,1200,1600,2200,2800) for v in x],   '#f97316'),
+        ('Normal (2.5–4kg)',     [trapezoidal_mf(v,2200,2500,3800,4300) for v in x],   '#22c55e'),
+        ('High (4–4.5kg)',       [trapezoidal_mf(v,3600,4000,4600,5200) for v in x],   '#f59e0b'),
+        ('Very High (>4.5kg)',   [trapezoidal_mf(v,4500,5000,6000,6000.1) for v in x], '#ef4444'),
     ], "Birth Weight Interpretation", "Weight (grams)", "weight_fuzzy.png", actual_values['weight'])
     plots['weight'] = 'static/weight_fuzzy.png'
 
@@ -570,17 +937,14 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
     ], "Mother's Age Interpretation", "Age (years)", "age_fuzzy.png", actual_values['age'])
     plots['age'] = 'static/age_fuzzy.png'
 
-    if inherited_probs_list:
-        diseases = [p['disease'] for p in inherited_probs_list]
-        base  = [p['base_prob']  * 100 for p in inherited_probs_list]
-        fuzzy = [p['fuzzy_prob'] * 100 for p in inherited_probs_list]
+    if family_history_items:
+        diseases = [item['disease'] for item in family_history_items]
+        indices = [item['risk_index'] for item in family_history_items]
         fig, ax = plt.subplots(figsize=(max(7, len(diseases) * 1.6), 4.5))
         xi = np.arange(len(diseases))
-        w = 0.35
-        ax.bar(xi-w/2, base,  w, label='Base Probability',  color='#38bdf8', edgecolor='#0ea5e9')
-        ax.bar(xi+w/2, fuzzy, w, label='With Uncertainty',   color='#6366f1', edgecolor='#4f46e5', alpha=0.9)
-        ax.set_title("Inherited / Genetic Risk per Condition", fontsize=12, fontweight='bold')
-        ax.set_ylabel('Probability (%)', fontsize=10)
+        ax.bar(xi, indices, 0.5, label='Family-History Indicator', color='#6366f1', edgecolor='#4f46e5', alpha=0.9)
+        ax.set_title("Family-History Indicator", fontsize=12, fontweight='bold')
+        ax.set_ylabel('Risk Index (0-100)', fontsize=10)
         ax.set_xticks(xi); ax.set_xticklabels(diseases, rotation=30, ha='right', fontsize=10)
         ax.legend(fontsize=9)
         ax.grid(True, axis='y', alpha=0.3)
@@ -591,11 +955,7 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
     else:
         plots['genetic'] = None
 
-    x_risk = np.linspace(0, 100, 1000)
-    low_mf  = np.clip(np.minimum((30-x_risk)/30, risk_levels['low']), 0, None)
-    mod_mf  = np.clip(np.minimum(np.minimum((x_risk-20)/30,(80-x_risk)/30), risk_levels['moderate']), 0, None)
-    high_mf = np.clip(np.minimum((x_risk-60)/40, risk_levels['high']), 0, None)
-    combined = np.maximum(low_mf, np.maximum(mod_mf, high_mf))
+    x_risk, low_mf, mod_mf, high_mf, combined = risk_output_curves(final_risk_levels)
     denom = simpson(combined, x=x_risk)
     centroid = simpson(x_risk*combined, x=x_risk)/denom if denom>0 else 0
     fig, ax = plt.subplots(figsize=(11, 5))
@@ -603,10 +963,10 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
     ax.plot(x_risk, mod_mf,   color='#f59e0b', lw=2, label='Moderate Risk zone')
     ax.plot(x_risk, high_mf,  color='#ef4444', lw=2, label='High Risk zone')
     ax.plot(x_risk, combined, color='#38bdf8', lw=2.5, linestyle='--', label='Combined Output')
-    ax.axvline(centroid, color='#f8fafc', lw=3, linestyle='--', label=f'Your Risk Score = {centroid:.1f}%')
+    ax.axvline(centroid, color='#f8fafc', lw=3, linestyle='--', label=f'Your Risk Index = {centroid:.1f} / 100')
     ax.fill_between(x_risk, 0, combined, color='#38bdf8', alpha=0.07)
-    ax.set_title("Final Risk Score — Fuzzy Logic Defuzzification", fontsize=14, fontweight='bold')
-    ax.set_xlabel("Risk Level (%)   |   0% = very safe   ·   100% = very high risk", fontsize=11)
+    ax.set_title("Final Risk Index - Hierarchical Fuzzy Defuzzification", fontsize=14, fontweight='bold')
+    ax.set_xlabel("Risk Index (0-100)   |   lower = less concern   |   higher = more concern", fontsize=11)
     ax.set_ylabel("Fuzzy Strength (0–1)", fontsize=11)
     ax.legend(loc='upper left', bbox_to_anchor=(1.02,1), fontsize=9.5, framealpha=0.9)
     ax.grid(True, alpha=0.3)
@@ -618,8 +978,8 @@ def generate_visualizations(fuzzy_inputs, risk_levels, actual_values, inherited_
     return centroid, plots
 
 def assess_risk(appearance, pulse, grimace, activity, respiration,
-                birth_week, birth_weight_g, maternal_age, delivery_comp, inherited_diseases,
-                child_gender):
+                birth_week, birth_weight_g, maternal_age, delivery_type, delivery_comp,
+                family_history, child_gender):
     normalized_gender = normalize_gender(child_gender)
     apgar_score, apgar_breakdown, apgar_category, apgar_severity, component_detail = \
         calculate_apgar(appearance, pulse, grimace, activity, respiration)
@@ -631,47 +991,123 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'maternal_age': fuzzify_maternal_age(maternal_age),
         'delivery_comp': fuzzify_delivery_comp(delivery_comp),
     }
-    risk_levels = apply_rules(fuzzy_inputs)
-    inherited_probs_list, inherited_explanation = estimate_inherited_prob(inherited_diseases, normalized_gender)
-    inherited_prob = np.mean([p['fuzzy_prob'] for p in inherited_probs_list]) if inherited_probs_list else 0.0
+    immediate_risk_levels, immediate_rules = apply_immediate_condition_rules(
+        fuzzy_inputs, return_rules=True
+    )
+    birth_risk_levels, birth_rules = apply_birth_related_rules(
+        fuzzy_inputs, return_rules=True
+    )
+    immediate_condition_risk_index = defuzzify_risk(immediate_risk_levels)
+    birth_related_risk_index = defuzzify_risk(birth_risk_levels)
 
-    overall_risk_prob, plot_paths = generate_visualizations(
-        fuzzy_inputs, risk_levels,
-        {'apgar': apgar_score, 'week': birth_week, 'weight': birth_weight_g, 'age': maternal_age},
-        inherited_probs_list
+    family_risk_levels, family_rules = apply_family_history_rules(
+        family_history, return_rules=True
+    )
+    family_history_risk_index = defuzzify_risk(family_risk_levels)
+    affected_relative_labels = {
+        'father': 'Father',
+        'mother': 'Mother',
+        'both_parents': 'Both parents',
+        'other_family_member': 'Other family member',
+        'unknown': 'Unknown',
+    }
+    family_history_items = []
+    if family_history.get('status') == 'yes':
+        family_history_items.append({
+            'disease': family_history.get('disease', ''),
+            'affected_relative': affected_relative_labels.get(
+                family_history.get('affected_relative'), 'Unknown'
+            ),
+            'risk_index': family_history_risk_index,
+        })
+    family_summary = family_history_message(family_history, family_history_risk_index)
+
+    final_risk_levels, hierarchical_rules = apply_hierarchical_risk_rules(
+        immediate_condition_risk_index,
+        birth_related_risk_index,
+        family_history_risk_index,
+        return_rules=True,
     )
 
-    total_risk = 0.7 * overall_risk_prob + 0.3 * inherited_prob * 100
+    overall_risk_index, plot_paths = generate_visualizations(
+        fuzzy_inputs, final_risk_levels,
+        {'apgar': apgar_score, 'week': birth_week, 'weight': birth_weight_g, 'age': maternal_age},
+        family_history_items
+    )
 
-    if total_risk < 30:
+    if overall_risk_index < 30:
         risk_level, risk_color = "Low", "low"
-        recommendation = "Based on the assessment, your baby appears to be in good health. Routine check-ups are recommended to monitor development."
-    elif total_risk < 70:
+        recommendation = "Continue normal newborn care and routine checkups, and contact a healthcare professional if anything seems unusual."
+    elif overall_risk_index < 70:
         risk_level, risk_color = "Moderate", "moderate"
-        recommendation = "Some factors require attention. Please consult your doctor for further evaluation and possibly additional tests."
+        recommendation = "Arrange or continue follow-up with a healthcare professional and pay closer attention to the highlighted factors."
     else:
         risk_level, risk_color = "High", "high"
-        recommendation = "The assessment indicates significant risk factors. Immediate medical attention is strongly advised."
+        recommendation = "Seek prompt professional medical evaluation, and do not wait for this application to confirm a diagnosis."
 
-    delivery_type = "Normal Vaginal Delivery" if delivery_comp == 0 else "Cesarean Section"
+    delivery_type_label = {
+        'vaginal': 'Vaginal Delivery',
+        'assisted': 'Assisted Delivery',
+        'cesarean': 'Cesarean Section',
+    }.get(delivery_type, str(delivery_type).title())
+    delivery_complication = 'Yes' if delivery_comp == 1 else 'No'
+    important_inputs_complete = all(value is not None for value in (
+        appearance, pulse, grimace, activity, respiration, birth_week,
+        birth_weight_g, maternal_age, delivery_type, delivery_comp, normalized_gender,
+    )) and family_history.get('status') in ('yes', 'no', 'unknown')
+    if family_history.get('status') == 'yes':
+        important_inputs_complete = important_inputs_complete and bool(
+            family_history.get('disease') and family_history.get('affected_relative')
+        )
+    confidence = calculate_assessment_confidence(
+        final_risk_levels, important_inputs_complete, family_history
+    )
+    main_factors, lower_impact_factors = identify_assessment_factors(
+        fuzzy_inputs, family_history_risk_index, family_history
+    )
+    triggered_rules = select_important_rules(
+        immediate_rules + birth_rules + family_rules + hierarchical_rules
+    )
+    user_guidance = build_user_guidance(
+        risk_level, main_factors, lower_impact_factors
+    )
     conclusion = (f"{risk_level} health risk. {apgar_breakdown}. "
                   f"Birth at {birth_week}w, weight {birth_weight_g:.0f}g, "
-                  f"mother age {maternal_age}, child gender: {normalized_gender}, delivery: {delivery_type}. "
-                  f"Birth-factor risk: {overall_risk_prob:.1f}%. "
-                  f"Inherited risk: {inherited_prob*100:.1f}%. "
-                  f"Total: {total_risk:.1f}%. {recommendation}")
+                  f"mother age {maternal_age}, child gender: {normalized_gender}, "
+                  f"delivery: {delivery_type_label}, delivery complication: {delivery_complication}. "
+                  f"Immediate Condition Risk Index: {immediate_condition_risk_index:.1f} / 100. "
+                  f"Birth-Related Risk Index: {birth_related_risk_index:.1f} / 100. "
+                  f"Family-History Risk Index: {family_history_risk_index:.1f} / 100. "
+                  f"Overall Risk Index: {overall_risk_index:.1f} / 100. "
+                  f"Confidence: {confidence['level']}. {recommendation}")
 
     return {
-        'overall_risk_probability': overall_risk_prob,
-        'inherited_disease_probability': inherited_prob * 100,
-        'total_risk_probability': total_risk,
+        'immediate_condition_risk_index': immediate_condition_risk_index,
+        'birth_related_risk_index': birth_related_risk_index,
+        'family_history_risk_index': family_history_risk_index,
+        'overall_risk_index': overall_risk_index,
+        'immediate_condition_risk_level': risk_level_for_index(immediate_condition_risk_index),
+        'birth_related_risk_level': risk_level_for_index(birth_related_risk_index),
+        'family_history_risk_level': risk_level_for_index(family_history_risk_index),
+        'immediate_risk_levels': immediate_risk_levels,
+        'birth_risk_levels': birth_risk_levels,
+        'family_risk_levels': family_risk_levels,
+        'final_risk_levels': final_risk_levels,
+        'confidence_level': confidence['level'],
+        'confidence_reasons': confidence['reasons'],
+        'confidence_details': confidence,
+        'main_contributing_factors': main_factors,
+        'lower_impact_factors': lower_impact_factors,
+        'triggered_rules': triggered_rules,
+        'user_guidance': user_guidance,
         'apgar_score': apgar_score,
         'apgar_category': apgar_category,
         'apgar_severity': apgar_severity,
         'apgar_breakdown': apgar_breakdown,
         'component_detail': component_detail,
-        'inherited_probs_list': inherited_probs_list,
-        'inherited_explanation': inherited_explanation,
+        'family_history': family_history,
+        'family_history_items': family_history_items,
+        'family_history_summary': family_summary,
         'conclusion': conclusion,
         'risk_level': risk_level,
         'risk_color': risk_color,
@@ -681,5 +1117,6 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'birth_weight_g': birth_weight_g,
         'maternal_age': maternal_age,
         'child_gender': normalized_gender,
-        'delivery_type': delivery_type,
+        'delivery_type': delivery_type_label,
+        'delivery_complication': delivery_complication,
     }

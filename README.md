@@ -5,14 +5,10 @@ A Flask web application that estimates newborn health risk using fuzzy logic fro
 - Gestational age (birth week)
 - Birth weight
 - Maternal age
-- Delivery type
-- Optional inherited family conditions
+- Delivery type and reported delivery complications
+- Simple known/unknown family disease history
 
-The app generates a detailed result page with:
-- Birth-factor risk score
-- Inherited risk score
-- Combined final risk score
-- Visual charts saved in `static/`
+The app generates a detailed result page with the APGAR breakdown, birth summary, module risk indices, overall assessment, confidence, contributing factors, fuzzy-rule traces, charts, and an educational-use reminder.
 
 Important: This tool is educational only and is not a medical diagnosis.
 
@@ -21,15 +17,17 @@ Important: This tool is educational only and is not a medical diagnosis.
 - Multi-step form for complete newborn input
 - APGAR score breakdown with per-component meaning
 - Fuzzy logic inference for birth-factor risk
-- Genetic history modeling with multiple inheritance modes
-- X-linked logic adjustment by child gender and parent status
+- Simple family-history input: Yes, No, or Unknown
+- If a disease is known: disease name and who has it
+- Family-history fuzzy indicator without an invented disease-specific probability
 - Auto-generated charts:
   - APGAR membership chart
   - Gestational-age chart
   - Birth-weight chart
   - Maternal-age chart
-  - Genetic risk chart (when diseases are provided)
+  - Family-history indicator chart (when a disease is provided)
   - Final risk defuzzification chart
+- Downloadable PDF matching the detailed results page, including APGAR details, birth information, module indices, family-history results, contributing factors, triggered rules, charts, and the final assessment
 
 ## Project Structure
 
@@ -106,29 +104,30 @@ http://127.0.0.1:5000
 
 6. Complete the 4 form steps in the UI:
 - Step 1: APGAR components (Appearance, Pulse, Grimace, Activity, Respiration)
-- Step 2: Birth info (week, weight + unit, maternal age, child gender, delivery type)
-- Step 3: Family genetic conditions (optional)
+- Step 2: Birth info (week, weight + unit, maternal age, child gender, delivery type, delivery complication)
+- Step 3: Family disease history (Yes, No, or Unknown)
 - Step 4: Review and submit
 
 7. Read results.
-- Birth Risk Score (%): from APGAR + week + weight + age + delivery
-- Inherited Risk (%): from selected disease inheritance modes
-- Final Risk (%): weighted combination
+- Immediate Condition Risk Index (0-100): from APGAR + delivery complication
+- Birth-Related Risk Index (0-100): from gestational age + weight + maternal age + delivery information
+- Family-History Indicator (0-100): from known status and affected-relative information
+- Overall Risk Index (0-100): hierarchical fuzzy inference across the three module indices
+- Risk Level: Low, Moderate, or High
+- Confidence: High, Moderate, or Low, based on input completeness, unknown family-history information, and fuzzy activation clarity
+- The detailed result page shows module indices, contributing factors, important triggered rules, and charts
 - Charts are saved/updated in `static/`
+- Select **Download PDF Summary** on the results page to save the assessment report.
+- PDF download tokens expire after one hour. For multi-worker or restarted deployments, set a shared `SECRET_KEY` environment variable so signed downloads remain valid.
 
 ## How Risk is Calculated (High Level)
 
 1. APGAR component scores are summed (0 to 10).
 2. Inputs are fuzzified into linguistic sets (for example: low/medium/high, preterm/term/postterm).
-3. Rule-based fuzzy inference estimates birth-factor risk levels.
-4. Genetic conditions are processed with selected inheritance modes.
-5. X-linked selections further adjust inherited probability by child gender + parent side/status.
-6. Defuzzification converts fuzzy outputs into percentages.
-7. Final risk is computed as:
-
-```text
-final_risk = 0.7 * birth_factor_risk + 0.3 * inherited_risk
-```
+3. Separate fuzzy rule bases produce Immediate Condition Risk and Birth-Related Risk indices.
+4. Simple family-history answers produce a Family-History Indicator. Disease names are stored for display but do not create disease-specific probabilities.
+5. Each module produces a 0–100 index through fuzzy inference and defuzzification.
+6. A final hierarchical fuzzy layer combines the three module indices using low/moderate/high rules. No fixed weighted-average formula is used.
 
 ## Input Guide
 
@@ -144,27 +143,15 @@ final_risk = 0.7 * birth_factor_risk + 0.3 * inherited_risk
 - Birth weight: accepts `g`, `kg`, or `lb` and converts internally to grams
 - Maternal age: expected range in UI is 12 to 60
 - Child gender: male or female
-- Delivery type: vaginal or C-section
+- Delivery type: vaginal, assisted, or Cesarean
+- Delivery complication: yes or no; delivery type alone is not treated as a complication
 
-### Genetic inputs (optional)
-For each condition:
-- Disease name (from common list or custom)
-- Inheritance mode
-- If X-linked is selected, parent side and status are required
+### Family-history inputs
+- Is there a known family disease? Yes, No, or Unknown
+- If Yes: select from 20 common family-history diseases and conditions, or choose **Other disease / not listed**
+- If Yes: who has it - Father, Mother, Both parents, Other family member, or Unknown
 
-## Inheritance Modes Supported
-
-- dominant_both_parents
-- dominant_one_parent
-- dominant_none_parents_grandparent_yes
-- recessive_both_parents_carriers
-- recessive_one_parent_carrier
-- recessive_none_parents_grandparent_yes
-- xlinked
-- complex
-- unknown
-
-(Displayed labels and explanations come from `INHERITANCE_MODES` in `fuzzy_logic.py`.)
+The user is not asked for inheritance mode, genotype, carrier status, chromosome type, or other technical genetic information.
 
 ## Generated Files
 
@@ -173,7 +160,7 @@ When you run assessments, the app writes/overwrites chart images in `static/`:
 - `week_fuzzy.png`
 - `weight_fuzzy.png`
 - `age_fuzzy.png`
-- `genetic_risks.png` (only when genetic conditions are added)
+- `genetic_risks.png` (family-history indicator when a disease is added)
 - `final_risk.png`
 
 ## Troubleshooting

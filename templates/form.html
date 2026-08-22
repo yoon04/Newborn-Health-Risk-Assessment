@@ -59,17 +59,20 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .irow{display:flex;gap:16px}
 .irow .fg{flex:1}
 .fi{width:100%;padding:12px 15px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14.5px;outline:none;transition:border-color .2s;font-family:'Plus Jakarta Sans',sans-serif}
-.fi:focus{border-color:var(--accent)}.fi::placeholder{color:var(--muted)}.fi.err{border-color:var(--red)}
+.fi:focus{border-color:var(--accent)}.fi::placeholder{color:var(--muted)}.fi.err,.fsel.err{border-color:var(--red)}
 .hint{font-size:11px;color:var(--muted);margin-top:5px}
 .conv{font-size:11px;color:var(--accent);margin-top:6px;line-height:1.5}
 .ferr{font-size:11px;color:var(--red);margin-top:4px;display:none}.ferr.show{display:block}
+.error-summary{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 16px;margin-bottom:20px;color:#991b1b;font-size:12.5px;line-height:1.55}
+.error-summary ul{margin:7px 0 0 18px}
 .wrow{display:flex;gap:10px}
 .winput{flex:1}
 .unit-tog{display:flex;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
 .ubtn{padding:10px 16px;background:var(--surface2);border:none;cursor:pointer;color:var(--muted);font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;transition:all .2s;border-right:1px solid var(--border)}
 .ubtn:last-child{border-right:none}.ubtn.active{background:var(--accent);color:#fff}.ubtn:hover:not(.active){background:rgba(15,118,110,.08);color:var(--accent)}
-.del-cards{display:flex;gap:12px}
-.del-card{flex:1;padding:16px;border:1.5px solid var(--border);border-radius:13px;cursor:pointer;text-align:center;background:var(--surface);transition:all .2s;box-shadow:var(--shadow-sm)}
+.del-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.del-cards.binary{grid-template-columns:repeat(2,minmax(0,1fr))}
+.del-card{padding:16px;border:1.5px solid var(--border);border-radius:13px;cursor:pointer;text-align:center;background:var(--surface);transition:all .2s;box-shadow:var(--shadow-sm)}
 .del-card:hover{border-color:var(--accent);background:rgba(15,118,110,.06)}.del-card.sel{border-color:var(--accent);background:rgba(15,118,110,.08)}
 .del-card input{display:none}.del-icon{width:54px;height:54px;border-radius:12px;margin:0 auto 10px;background:#eef7f6;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)}
 .del-icon svg{width:34px;height:34px;fill:#0f766e}
@@ -86,6 +89,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .dis-frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .xfield{display:none}
 @media(max-width:540px){.dis-frow{grid-template-columns:1fr}}
+@media(max-width:700px){.del-cards,.del-cards.binary{grid-template-columns:1fr}}
 @media(max-width:900px){.apgar-opts{grid-template-columns:1fr}}
 .fsel{width:100%;padding:10px 13px;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;outline:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
 .fsel:focus{border-color:var(--accent)}
@@ -120,13 +124,22 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
       <div class="prog-line" id="line1"></div>
       <div class="prog-step"><div class="prog-dot" id="dot2">2</div><div class="prog-label" id="lbl2">Birth Info</div></div>
       <div class="prog-line" id="line2"></div>
-      <div class="prog-step"><div class="prog-dot" id="dot3">3</div><div class="prog-label" id="lbl3">Genetics</div></div>
+      <div class="prog-step"><div class="prog-dot" id="dot3">3</div><div class="prog-label" id="lbl3">Family History</div></div>
       <div class="prog-line" id="line3"></div>
       <div class="prog-step"><div class="prog-dot" id="dot4">4</div><div class="prog-label" id="lbl4">Review</div></div>
     </div>
   </div>
   <br>
   <div class="disclaimer"><strong>Important:</strong> Educational use only. This does not replace professional medical advice.</div>
+
+  {% if errors %}
+  <div class="error-summary" role="alert" aria-live="polite">
+    <strong>Please correct the highlighted information.</strong>
+    <ul>
+      {% for message in errors.values() %}<li>{{ message }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
 
   <form method="POST" id="mainForm" novalidate>
 
@@ -143,46 +156,51 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
           <div>
             <div class="apgar-lbl">Appearance (Skin Color)</div>
             <div class="apgar-opts" id="grp_appearance">
-              <label class="apgar-opt" onclick="pickApgar(this,'appearance',0)"><input type="radio" name="appearance" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>Blue or pale all over</strong><span>Oxygen is not reaching the skin - poor circulation throughout body</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'appearance',1)"><input type="radio" name="appearance" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Pink body, blue hands/feet</strong><span>Body color looks good, but fingertips and toes are still slightly blue</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'appearance',2)"><input type="radio" name="appearance" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Fully pink throughout</strong><span>Excellent - healthy color from head to toe, great circulation</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'appearance',0)"><input type="radio" name="appearance" value="0" required {% if form_data.get('appearance') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>Blue or pale all over</strong><span>Oxygen is not reaching the skin - poor circulation throughout body</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'appearance',1)"><input type="radio" name="appearance" value="1" {% if form_data.get('appearance') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Pink body, blue hands/feet</strong><span>Body color looks good, but fingertips and toes are still slightly blue</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'appearance',2)"><input type="radio" name="appearance" value="2" {% if form_data.get('appearance') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Fully pink throughout</strong><span>Excellent - healthy color from head to toe, great circulation</span></div></label>
             </div>
+            <div class="ferr{% if errors.get('appearance') %} show{% endif %}" id="err_appearance">{{ errors.get('appearance', 'Select an APGAR score of 0, 1, or 2.') }}</div>
           </div>
 
           <div>
             <div class="apgar-lbl">Pulse (Heart Rate)</div>
             <div class="apgar-opts" id="grp_pulse">
-              <label class="apgar-opt" onclick="pickApgar(this,'pulse',0)"><input type="radio" name="pulse" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>No heartbeat detected</strong><span>Critical - heart is not beating. Immediate intervention required</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'pulse',1)"><input type="radio" name="pulse" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Slow - below 100 beats/min</strong><span>Heart is beating but too slowly - needs close monitoring</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'pulse',2)"><input type="radio" name="pulse" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong - 100+ beats/min</strong><span>Excellent - heart is beating at a healthy, vigorous rate</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'pulse',0)"><input type="radio" name="pulse" value="0" required {% if form_data.get('pulse') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>No heartbeat detected</strong><span>Critical - heart is not beating. Immediate intervention required</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'pulse',1)"><input type="radio" name="pulse" value="1" {% if form_data.get('pulse') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Slow - below 100 beats/min</strong><span>Heart is beating but too slowly - needs close monitoring</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'pulse',2)"><input type="radio" name="pulse" value="2" {% if form_data.get('pulse') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong - 100+ beats/min</strong><span>Excellent - heart is beating at a healthy, vigorous rate</span></div></label>
             </div>
+            <div class="ferr{% if errors.get('pulse') %} show{% endif %}" id="err_pulse">{{ errors.get('pulse', 'Select an APGAR score of 0, 1, or 2.') }}</div>
           </div>
 
           <div>
             <div class="apgar-lbl">Grimace (Reflex Response)</div>
             <div class="apgar-opts" id="grp_grimace">
-              <label class="apgar-opt" onclick="pickApgar(this,'grimace',0)"><input type="radio" name="grimace" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>No response to stimulation</strong><span>Baby shows no reaction when stimulated - reflexes are absent</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'grimace',1)"><input type="radio" name="grimace" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Grimace only</strong><span>Some reflex activity present but the response is weak</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'grimace',2)"><input type="radio" name="grimace" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Cry, cough, or sneeze</strong><span>Excellent - baby responds strongly and vigorously to stimulation</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'grimace',0)"><input type="radio" name="grimace" value="0" required {% if form_data.get('grimace') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>No response to stimulation</strong><span>Baby shows no reaction when stimulated - reflexes are absent</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'grimace',1)"><input type="radio" name="grimace" value="1" {% if form_data.get('grimace') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Grimace only</strong><span>Some reflex activity present but the response is weak</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'grimace',2)"><input type="radio" name="grimace" value="2" {% if form_data.get('grimace') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Cry, cough, or sneeze</strong><span>Excellent - baby responds strongly and vigorously to stimulation</span></div></label>
             </div>
+            <div class="ferr{% if errors.get('grimace') %} show{% endif %}" id="err_grimace">{{ errors.get('grimace', 'Select an APGAR score of 0, 1, or 2.') }}</div>
           </div>
 
           <div>
             <div class="apgar-lbl">Activity (Muscle Tone)</div>
             <div class="apgar-opts" id="grp_activity">
-              <label class="apgar-opt" onclick="pickApgar(this,'activity',0)"><input type="radio" name="activity" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>Limp - no movement at all</strong><span>Very low or absent muscle tone. Baby is not moving</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'activity',1)"><input type="radio" name="activity" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Some flexion of arms/legs</strong><span>Baby shows some movement but muscle strength is limited</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'activity',2)"><input type="radio" name="activity" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Active, vigorous movement</strong><span>Excellent - baby is actively moving with good, healthy muscle tone</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'activity',0)"><input type="radio" name="activity" value="0" required {% if form_data.get('activity') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>Limp - no movement at all</strong><span>Very low or absent muscle tone. Baby is not moving</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'activity',1)"><input type="radio" name="activity" value="1" {% if form_data.get('activity') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Some flexion of arms/legs</strong><span>Baby shows some movement but muscle strength is limited</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'activity',2)"><input type="radio" name="activity" value="2" {% if form_data.get('activity') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Active, vigorous movement</strong><span>Excellent - baby is actively moving with good, healthy muscle tone</span></div></label>
             </div>
+            <div class="ferr{% if errors.get('activity') %} show{% endif %}" id="err_activity">{{ errors.get('activity', 'Select an APGAR score of 0, 1, or 2.') }}</div>
           </div>
 
           <div>
             <div class="apgar-lbl">Respiration (Breathing Effort)</div>
             <div class="apgar-opts" id="grp_respiration">
-              <label class="apgar-opt" onclick="pickApgar(this,'respiration',0)"><input type="radio" name="respiration" value="0" required><div class="opt-score s0">0</div><div class="opt-txt"><strong>Not breathing at all</strong><span>Critical - immediate help is required right away</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'respiration',1)"><input type="radio" name="respiration" value="1"><div class="opt-score s1">1</div><div class="opt-txt"><strong>Weak or irregular breathing</strong><span>Present but too weak or inconsistent - needs support</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'respiration',2)"><input type="radio" name="respiration" value="2"><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong, vigorous cry</strong><span>Excellent - breathing is healthy and lungs are working well</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'respiration',0)"><input type="radio" name="respiration" value="0" required {% if form_data.get('respiration') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>Not breathing at all</strong><span>Critical - immediate help is required right away</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'respiration',1)"><input type="radio" name="respiration" value="1" {% if form_data.get('respiration') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Weak or irregular breathing</strong><span>Present but too weak or inconsistent - needs support</span></div></label>
+              <label class="apgar-opt" onclick="pickApgar(this,'respiration',2)"><input type="radio" name="respiration" value="2" {% if form_data.get('respiration') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong, vigorous cry</strong><span>Excellent - breathing is healthy and lungs are working well</span></div></label>
             </div>
+            <div class="ferr{% if errors.get('respiration') %} show{% endif %}" id="err_respiration">{{ errors.get('respiration', 'Select an APGAR score of 0, 1, or 2.') }}</div>
           </div>
 
         </div>
@@ -215,33 +233,33 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
         <div class="irow">
           <div class="fg">
             <label class="fl">Gestational Age (Weeks)</label>
-            <input type="number" step="0.5" name="birth_week" id="birth_week" class="fi" min="20" max="45" placeholder="e.g. 38.5" required>
+            <input type="number" step="0.5" name="birth_week" id="birth_week" class="fi{% if errors.get('birth_week') %} err{% endif %}" min="20" max="45" value="{{ form_data.get('birth_week', '') }}" placeholder="e.g. 38.5" required>
             <div class="hint">Normal full-term pregnancy: 37-42 weeks</div>
-            <div class="ferr" id="err_week">Please enter a valid week between 20 and 45.</div>
+            <div class="ferr{% if errors.get('birth_week') %} show{% endif %}" id="err_week">{{ errors.get('birth_week', 'Enter a gestational age from 20 to 45 in half-week increments.') }}</div>
           </div>
           <div class="fg">
             <label class="fl">Mother's Age (Years)</label>
-            <input type="number" name="maternal_age" id="maternal_age" class="fi" min="12" max="60" placeholder="e.g. 28" required>
+            <input type="number" step="1" name="maternal_age" id="maternal_age" class="fi{% if errors.get('maternal_age') %} err{% endif %}" min="12" max="60" value="{{ form_data.get('maternal_age', '') }}" placeholder="e.g. 28" required>
             <div class="hint">Optimal childbearing age range: 22-35 years</div>
-            <div class="ferr" id="err_age">Please enter an age between 12 and 60.</div>
+            <div class="ferr{% if errors.get('maternal_age') %} show{% endif %}" id="err_age">{{ errors.get('maternal_age', 'Enter a whole-number age between 12 and 60.') }}</div>
           </div>
         </div>
         <div class="fg">
           <label class="fl">Child's Gender</label>
-          <select name="child_gender" id="child_gender" class="fsel" required>
+          <select name="child_gender" id="child_gender" class="fsel{% if errors.get('child_gender') %} err{% endif %}" required>
             <option value="">- select -</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="male" {% if form_data.get('child_gender') == 'male' %}selected{% endif %}>Male</option>
+            <option value="female" {% if form_data.get('child_gender') == 'female' %}selected{% endif %}>Female</option>
           </select>
-          <div class="hint">Required for X-linked inheritance calculation.</div>
-          <div class="ferr" id="err_gender">Please select the child's gender.</div>
+          <div class="hint">Used as part of the newborn assessment summary.</div>
+          <div class="ferr{% if errors.get('child_gender') %} show{% endif %}" id="err_gender">{{ errors.get('child_gender', "Select the child's gender.") }}</div>
         </div>
 
         <div class="fg">
           <label class="fl">Birth Weight</label>
           <div class="wrow">
             <div class="winput">
-              <input type="number" step="0.01" name="birth_weight" id="birth_weight" class="fi" min="0.1" placeholder="Enter weight..." required>
+              <input type="number" step="0.01" name="birth_weight" id="birth_weight" class="fi{% if errors.get('birth_weight') %} err{% endif %}" min="0.01" value="{{ form_data.get('birth_weight', '') }}" placeholder="Enter weight..." required>
             </div>
             <div class="unit-tog">
               <button type="button" class="ubtn" id="u_g" onclick="setUnit('g')">g</button>
@@ -249,55 +267,107 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
               <button type="button" class="ubtn active" id="u_lb" onclick="setUnit('lb')">lb</button>
             </div>
           </div>
-          <input type="hidden" name="weight_unit" id="weight_unit" value="lb">
+          <input type="hidden" name="weight_unit" id="weight_unit" value="{{ display_weight_unit }}">
           <div class="hint" id="whint">Normal range: 5.5-8.8 lb. Click units to switch</div>
           <div class="conv" id="wconv">Equivalent values will appear here.</div>
-          <div class="ferr" id="err_weight">Please enter a valid birth weight.</div>
+          <div class="ferr{% if errors.get('birth_weight') %} show{% endif %}" id="err_weight">{{ errors.get('birth_weight', 'Enter a birth weight that converts to at least 100 g and less than 6,000 g.') }}</div>
         </div>
 
         <div class="fg">
           <label class="fl">Delivery Method</label>
           <div class="del-cards">
-            <label class="del-card sel" onclick="pickDel(this)">
-              <input type="radio" name="delivery_comp" value="0" checked>
+            <label class="del-card sel" onclick="pickRadioCard(this)">
+              <input type="radio" name="delivery_type" value="vaginal" {% if form_data.get('delivery_type', 'vaginal') == 'vaginal' %}checked{% endif %}>
               <div class="del-icon">🤱</div>
-              <strong>Normal Vaginal Delivery</strong>
+              <strong>Vaginal Delivery</strong>
               <span>Natural birth through birth canal</span>
             </label>
-            <label class="del-card" onclick="pickDel(this)">
-              <input type="radio" name="delivery_comp" value="1">
+            <label class="del-card" onclick="pickRadioCard(this)">
+              <input type="radio" name="delivery_type" value="assisted" {% if form_data.get('delivery_type') == 'assisted' %}checked{% endif %}>
+              <div class="del-icon">🩺</div>
+              <strong>Assisted Delivery</strong>
+              <span>Vaginal delivery using instruments</span>
+            </label>
+            <label class="del-card" onclick="pickRadioCard(this)">
+              <input type="radio" name="delivery_type" value="cesarean" {% if form_data.get('delivery_type') == 'cesarean' %}checked{% endif %}>
               <div class="del-icon">🏨</div>
               <strong>Cesarean Section (C-Section)</strong>
               <span>Surgical delivery procedure</span>
             </label>
           </div>
-          <div class="hint">This selection is included in the birth-factor risk calculation.</div>
+          <div class="hint">Delivery method is recorded separately and does not by itself mean a complication occurred.</div>
+          <div class="ferr{% if errors.get('delivery_type') %} show{% endif %}" id="err_delivery_type">{{ errors.get('delivery_type', 'Select vaginal, assisted, or Cesarean delivery.') }}</div>
+        </div>
+
+        <div class="fg">
+          <label class="fl">Delivery Complication</label>
+          <div class="del-cards binary">
+            <label class="del-card" onclick="pickRadioCard(this)">
+              <input type="radio" name="delivery_comp" value="0" {% if form_data.get('delivery_comp') == '0' %}checked{% endif %}>
+              <strong>No</strong>
+              <span>No delivery complication was reported</span>
+            </label>
+            <label class="del-card" onclick="pickRadioCard(this)">
+              <input type="radio" name="delivery_comp" value="1" {% if form_data.get('delivery_comp') == '1' %}checked{% endif %}>
+              <strong>Yes</strong>
+              <span>A delivery complication was reported</span>
+            </label>
+          </div>
+          <div class="hint">This value can interact with APGAR and other birth factors in the fuzzy assessment.</div>
+          <div class="ferr{% if errors.get('delivery_comp') %} show{% endif %}" id="err_delivery_comp">{{ errors.get('delivery_comp', 'Select whether a delivery complication occurred.') }}</div>
         </div>
 
         <div class="nav-bar">
           <button type="button" class="btn btn-ghost" onclick="goPrev(2)">&#x2190; Back</button>
-          <button type="button" class="btn btn-next" onclick="goNext(2)">Genetic History &#x2192;</button>
+          <button type="button" class="btn btn-next" onclick="goNext(2)">Family History &#x2192;</button>
         </div>
       </div>
     </div>
 
-    <!-- Step 3: Genetics -->
+    <!-- Step 3: Family history -->
     <div class="sec-card" id="step3">
       <div class="card-hd">
         <div class="card-icon" style="background:rgba(34,197,94,.1)">🧬</div>
-        <div><h2>Inherited / Genetic Conditions</h2><p>Family history helps estimate genetic risk.</p></div>
+        <div><h2>Family Disease History</h2><p>Only simple family information is needed.</p></div>
       </div>
       <div class="card-bd">
         <div class="fg">
-          <label class="fl">Does your family have any known inherited health conditions?</label>
-          <div class="gen-tog">
-            <button type="button" class="togbtn active" id="togNo" onclick="setGenetic(false)">None known</button>
-            <button type="button" class="togbtn" id="togYes" onclick="setGenetic(true)">Add conditions</button>
+          <label class="fl">Is there a known family disease?</label>
+          <div class="del-cards" id="family-status-cards">
+            {% for value, title, note in [('yes', 'Yes', 'A family disease is known'), ('no', 'No', 'No family disease is known'), ('unknown', 'Unknown', 'Family history is not known')] %}
+            <label class="del-card" onclick="setFamilyStatus(this, '{{ value }}')">
+              <input type="radio" name="family_history_status" value="{{ value }}" {% if form_data.get('family_history_status') == value %}checked{% endif %}>
+              <strong>{{ title }}</strong><span>{{ note }}</span>
+            </label>
+            {% endfor %}
           </div>
+          <div class="ferr{% if errors.get('family_history_status') %} show{% endif %}" id="err_family_history_status">{{ errors.get('family_history_status', 'Select Yes, No, or Unknown.') }}</div>
         </div>
-        <div id="gen-section" style="display:none">
-          <div class="dis-container" id="dis-container"></div>
-          <button type="button" class="add-btn" onclick="addDisease()">+ Add a condition</button>
+        <div id="family-yes-fields" style="display:none">
+          <div class="dis-frow">
+            <div class="fg">
+              <label class="fl" for="family_disease">Disease name</label>
+              <select id="family_disease" name="family_disease" class="fsel{% if errors.get('family_disease') %} err{% endif %}">
+                <option value="">- select a disease -</option>
+                {% for value, label in family_disease_options %}
+                <option value="{{ value }}" {% if form_data.get('family_disease') == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+                <option value="{{ other_family_disease[0] }}" {% if form_data.get('family_disease') == other_family_disease[0] %}selected{% endif %}>{{ other_family_disease[1] }}</option>
+              </select>
+              <div class="hint">The disease name is stored for the report only. It does not create a disease-specific probability.</div>
+              <div class="ferr{% if errors.get('family_disease') %} show{% endif %}" id="err_family_disease">{{ errors.get('family_disease', 'Select a disease or choose Other disease / not listed.') }}</div>
+            </div>
+            <div class="fg">
+              <label class="fl" for="affected_relative">Who has the disease?</label>
+              <select id="affected_relative" name="affected_relative" class="fsel{% if errors.get('affected_relative') %} err{% endif %}">
+                <option value="">- select -</option>
+                {% for value, label in [('father','Father'),('mother','Mother'),('both_parents','Both parents'),('other_family_member','Other family member'),('unknown','Unknown')] %}
+                <option value="{{ value }}" {% if form_data.get('affected_relative') == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <div class="ferr{% if errors.get('affected_relative') %} show{% endif %}" id="err_affected_relative">{{ errors.get('affected_relative', 'Select who has the disease.') }}</div>
+            </div>
+          </div>
         </div>
         <div class="nav-bar">
           <button type="button" class="btn btn-ghost" onclick="goPrev(3)">&#x2190; Back</button>
@@ -325,9 +395,14 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 </div>
 
 <script>
-    const INHERITANCE_MODES = {{ inheritance_modes | tojson }};
-    const COMMON_DISEASES = {{ common_diseases | tojson }};
-    let curStep=1, apgarVals={}, disCount=0, genOn=false;
+    const SERVER_ERRORS = {{ errors | tojson }};
+    const APGAR_FIELDS = ['appearance','pulse','grimace','activity','respiration'];
+    const BIRTH_FIELDS = ['birth_week','birth_weight','maternal_age','child_gender','delivery_type','delivery_comp'];
+    const serverErrorFields=Object.keys(SERVER_ERRORS);
+    let curStep=serverErrorFields.some(f=>APGAR_FIELDS.includes(f))?1:
+      serverErrorFields.some(f=>BIRTH_FIELDS.includes(f))?2:
+      serverErrorFields.some(f=>['family_history_status','family_disease','affected_relative'].includes(f))?3:1;
+    let apgarVals={};
 
 function refreshProg(){
   for(let i=1;i<=4;i++){
@@ -341,32 +416,36 @@ function refreshProg(){
 function goNext(f){if(!validate(f))return;if(f===3)buildReview();curStep=f+1;refreshProg();window.scrollTo({top:0,behavior:'smooth'});}
 function goPrev(f){curStep=f-1;refreshProg();window.scrollTo({top:0,behavior:'smooth'});}
 
-function showE(e,f){document.getElementById(e).classList.add('show');if(f)document.getElementById(f).classList.add('err');}
-function hideE(e,f){document.getElementById(e).classList.remove('show');if(f)document.getElementById(f).classList.remove('err');}
+function showE(e,f,message){const err=document.getElementById(e);if(err){if(message)err.textContent=message;err.classList.add('show');}if(f){const field=document.getElementById(f);if(field)field.classList.add('err');}}
+function hideE(e,f){const err=document.getElementById(e);if(err)err.classList.remove('show');if(f){const field=document.getElementById(f);if(field)field.classList.remove('err');}}
 
 function validate(s){
   let ok=true;
   if(s===1){
-    ['appearance','pulse','grimace','activity','respiration'].forEach(f=>{
-      if(!document.querySelector('input[name='+f+']:checked')){
-        ok=false;
-        const g=document.getElementById('grp_'+f);
-        g.style.outline='2px solid #ef4444';
-        setTimeout(()=>g.style.outline='',2500);
-      }
+    APGAR_FIELDS.forEach(f=>{
+      const selected=document.querySelector('input[name='+f+']:checked');
+      if(!selected||!['0','1','2'].includes(selected.value)){showE('err_'+f);ok=false;}
+      else hideE('err_'+f);
     });
-    if(!ok)alert('Please rate all 5 APGAR indicators before continuing.');
   }
   if(s===2){
-    const w=parseFloat(document.getElementById('birth_week').value);
-    const a=parseInt(document.getElementById('maternal_age').value);
-    const wt=parseFloat(document.getElementById('birth_weight').value);
+    const weekRaw=document.getElementById('birth_week').value.trim();
+    const ageRaw=document.getElementById('maternal_age').value.trim();
+    const weightRaw=document.getElementById('birth_weight').value.trim();
+    const w=Number(weekRaw),a=Number(ageRaw),wt=Number(weightRaw);
     const g=document.getElementById('child_gender').value;
-    if(isNaN(w)||w<20||w>45){showE('err_week','birth_week');ok=false;}else hideE('err_week','birth_week');
-    if(isNaN(a)||a<12||a>60){showE('err_age','maternal_age');ok=false;}else hideE('err_age','maternal_age');
-    if(isNaN(wt)||wt<=0){showE('err_weight','birth_weight');ok=false;}else hideE('err_weight','birth_weight');
-    if(!g){showE('err_gender','child_gender');ok=false;}else hideE('err_gender','child_gender');
+    const unit=document.getElementById('weight_unit').value;
+    const deliveryType=document.querySelector('input[name=delivery_type]:checked');
+    const deliveryComp=document.querySelector('input[name=delivery_comp]:checked');
+    if(!weekRaw||!Number.isFinite(w)||w<20||w>45||Math.abs(w*2-Math.round(w*2))>1e-9){showE('err_week','birth_week','Enter a gestational age from 20 to 45 in half-week increments.');ok=false;}else hideE('err_week','birth_week');
+    if(!/^\d+$/.test(ageRaw)||!Number.isInteger(a)||a<12||a>60){showE('err_age','maternal_age','Enter a whole-number age between 12 and 60.');ok=false;}else hideE('err_age','maternal_age');
+    const weightG=['g','kg','lb'].includes(unit)?toGrams(wt,unit):NaN;
+    if(!weightRaw||!Number.isFinite(wt)||wt<=0||!Number.isFinite(weightG)||weightG<100||weightG>=6000){showE('err_weight','birth_weight','Enter a birth weight that converts to at least 100 g and less than 6,000 g.');ok=false;}else hideE('err_weight','birth_weight');
+    if(!['male','female'].includes(g)){showE('err_gender','child_gender');ok=false;}else hideE('err_gender','child_gender');
+    if(!deliveryType||!['vaginal','assisted','cesarean'].includes(deliveryType.value)){showE('err_delivery_type');ok=false;}else hideE('err_delivery_type');
+    if(!deliveryComp||!['0','1'].includes(deliveryComp.value)){showE('err_delivery_comp');ok=false;}else hideE('err_delivery_comp');
   }
+  if(s===3)ok=validateFamilyHistory();
   return ok;
 }
 
@@ -374,6 +453,7 @@ function pickApgar(lbl,field,score){
   lbl.closest('.apgar-opts').querySelectorAll('.apgar-opt').forEach(l=>l.className='apgar-opt');
   lbl.classList.add('sel'+score);
   apgarVals[field]=score;
+  hideE('err_'+field);
   updateScore();
 }
 function updateScore(){
@@ -408,106 +488,37 @@ function setUnit(u){
   updateWeightConversion();
 }
 
-function pickDel(lbl){
-  document.querySelectorAll('.del-card').forEach(c=>c.classList.remove('sel'));
+function pickRadioCard(lbl){
+  lbl.closest('.del-cards').querySelectorAll('.del-card').forEach(c=>c.classList.remove('sel'));
   lbl.classList.add('sel');lbl.querySelector('input').checked=true;
 }
 
-function setGenetic(on){
-  genOn=on;
-  document.getElementById('togYes').classList.toggle('active',on);
-  document.getElementById('togNo').classList.toggle('active',!on);
-  document.getElementById('gen-section').style.display=on?'block':'none';
-  if(on && document.querySelectorAll('.dis-block').length===0) addDisease();
-  if(!on){
-    document.getElementById('dis-container').innerHTML='';
-    disCount=0;
-  }
+function setFamilyStatus(card,status){
+  pickRadioCard(card);
+  document.getElementById('family-yes-fields').style.display=status==='yes'?'block':'none';
+  hideE('err_family_history_status');
 }
 
-function addDisease(){
-  const c=document.getElementById('dis-container'),idx=disCount++;
-  const dOpts=COMMON_DISEASES.map(d=>`<option value="${d}">${d}</option>`).join('');
-  const el=document.createElement('div');
-  el.className='dis-block';el.id='db_'+idx;
-  el.innerHTML=`<div class="dis-hd"><h4>Condition #${idx+1}</h4><button type="button" class="rem-btn" onclick="removeD(${idx})">Remove</button></div>
-  <div class="dis-frow">
-    <div>
-      <label class="fl" style="font-size:12px">Condition name</label>
-      <select name="disease_${idx}" class="fsel" onchange="togOther(this,${idx})"><option value="">- select -</option>${dOpts}</select>
-      <div id="ow_${idx}" style="display:none;margin-top:8px"><input type="text" name="other_disease_${idx}" class="fi" style="font-size:13px;padding:9px 12px" placeholder="Type condition name..." oninput="setModeFromOther(${idx}, this.value)"></div>
-    </div>
-    <div>
-      <label class="fl" style="font-size:12px">How is this inherited?</label>
-      <select name="mode_${idx}" class="fsel" onchange="updHint(this,${idx});togXlinked(${idx},this.value)"></select>
-      <div class="mode-hint" id="mh_${idx}"></div>
-    </div>
-    <div class="xfield" id="xparent_wrap_${idx}">
-      <label class="fl" style="font-size:12px">X-linked parent history</label>
-      <select name="xlinked_parent_${idx}" class="fsel">
-        <option value="mother">Mother side</option>
-        <option value="father">Father side</option>
-      </select>
-    </div>
-    <div class="xfield" id="xstatus_wrap_${idx}">
-      <label class="fl" style="font-size:12px">X-linked status</label>
-      <select name="xlinked_status_${idx}" class="fsel">
-        <option value="carrier">Carrier</option>
-        <option value="affected">Affected</option>
-      </select>
-      <div class="mode-hint">Used with child's gender to estimate X-linked inheritance.</div>
-    </div>
-  </div>`;
-  c.appendChild(el);
-  applyDiseaseRules(idx, '');
-}
-function removeD(i){const b=document.getElementById('db_'+i);if(b)b.remove();}
-function normalizeDiseaseName(v){
-  return (v||'').toLowerCase().replace(/[^a-z]/g,'');
-}
-function diseaseCategory(v){
-  const k=normalizeDiseaseName(v);
-  if(['hemophilia','colorblindness','musculardystrophy'].includes(k)) return 'xlinked';
-  if(['diabetes','heartdisease','heartdiseases'].includes(k)) return 'complex';
-  return 'other';
-}
-function renderModeOptions(i,category,defaultMode=''){
-  const modeSel=document.querySelector('select[name=mode_'+i+']');
-  if(!modeSel) return;
-  const opts=Object.entries(INHERITANCE_MODES)
-    .filter(([k,_])=>k!=='xlinked_mother_carrier')
-    .filter(([k,_])=>!(category==='other' && (k==='xlinked' || k==='complex')))
-    .map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
-  modeSel.innerHTML=`<option value="">- select -</option>${opts}`;
-  modeSel.value=defaultMode||'';
-  if(modeSel.value!==(defaultMode||'')) modeSel.value='';
-  updHint(modeSel,i);
-  togXlinked(i,modeSel.value);
-}
-function applyDiseaseRules(i,diseaseName){
-  const category=diseaseCategory(diseaseName);
-  const defaultMode=category==='xlinked'?'xlinked':(category==='complex'?'complex':'');
-  renderModeOptions(i,category,defaultMode);
-}
-function setModeFromOther(i,v){applyDiseaseRules(i,v);}
-function togOther(s,i){
-  const isOther=s.value==='Other';
-  const wrap=document.getElementById('ow_'+i);
-  wrap.style.display=isOther?'block':'none';
-  if(isOther){
-    const other=document.querySelector('input[name=other_disease_'+i+']');
-    applyDiseaseRules(i,other?other.value:'');
+function validateFamilyHistory(){
+  let ok=true;
+  const selected=document.querySelector('input[name=family_history_status]:checked');
+  if(!selected||!['yes','no','unknown'].includes(selected.value)){
+    showE('err_family_history_status');ok=false;
   }else{
-    applyDiseaseRules(i,s.value);
+    hideE('err_family_history_status');
   }
-}
-function updHint(s,i){const k=s.value,el=document.getElementById('mh_'+i);if(el&&INHERITANCE_MODES[k])el.textContent=INHERITANCE_MODES[k].explanation;else if(el)el.textContent='';}
-function togXlinked(i,mode){
-  const parentWrap=document.getElementById('xparent_wrap_'+i);
-  const statusWrap=document.getElementById('xstatus_wrap_'+i);
-  const show=mode==='xlinked';
-  if(parentWrap) parentWrap.style.display=show?'block':'none';
-  if(statusWrap) statusWrap.style.display=show?'block':'none';
+  if(selected&&selected.value==='yes'){
+    const disease=document.getElementById('family_disease');
+    const relative=document.getElementById('affected_relative');
+    const diseaseName=disease.value;
+    if(!diseaseName){
+      showE('err_family_disease','family_disease');ok=false;
+    }else hideE('err_family_disease','family_disease');
+    if(!['father','mother','both_parents','other_family_member','unknown'].includes(relative.value)){
+      showE('err_affected_relative','affected_relative');ok=false;
+    }else hideE('err_affected_relative','affected_relative');
+  }
+  return ok;
 }
 
 function toGrams(v,u){
@@ -538,7 +549,42 @@ function updateWeightConversion(){
 }
 
 document.getElementById('birth_weight').addEventListener('input',updateWeightConversion);
-setUnit('lb');
+setUnit(document.getElementById('weight_unit').value||'lb');
+
+APGAR_FIELDS.forEach(field=>{
+  const selected=document.querySelector(`input[name="${field}"]:checked`);
+  if(selected){
+    const score=Number(selected.value);
+    apgarVals[field]=score;
+    selected.closest('.apgar-opt').classList.add('sel'+score);
+  }
+});
+updateScore();
+
+document.querySelectorAll('.del-cards').forEach(group=>{
+  const selected=group.querySelector('input:checked');
+  group.querySelectorAll('.del-card').forEach(card=>card.classList.toggle('sel',Boolean(selected&&card.contains(selected))));
+});
+
+const initialFamilyStatus=document.querySelector('input[name=family_history_status]:checked');
+if(initialFamilyStatus){
+  const card=initialFamilyStatus.closest('.del-card');
+  if(card)card.classList.add('sel');
+  document.getElementById('family-yes-fields').style.display=initialFamilyStatus.value==='yes'?'block':'none';
+}
+refreshProg();
+
+document.getElementById('mainForm').addEventListener('submit',event=>{
+  for(let step=1;step<=3;step++){
+    if(!validate(step)){
+      event.preventDefault();
+      curStep=step;
+      refreshProg();
+      window.scrollTo({top:0,behavior:'smooth'});
+      return;
+    }
+  }
+});
 
 function buildReview(){
   const fs=['appearance','pulse','grimace','activity','respiration'];
@@ -548,16 +594,23 @@ function buildReview(){
   const un=document.getElementById('weight_unit').value;
   const ag=document.getElementById('maternal_age').value;
   const cg=document.getElementById('child_gender').value;
-  const dl=document.querySelector('input[name=delivery_comp]:checked')?.value;
-  const dc=document.querySelectorAll('.dis-block');
+  const dt=document.querySelector('input[name=delivery_type]:checked')?.value;
+  const dcValue=document.querySelector('input[name=delivery_comp]:checked')?.value;
+  const familyStatus=document.querySelector('input[name=family_history_status]:checked')?.value;
+  const familyDiseaseSelect=document.getElementById('family_disease');
+  const familyDisease=familyDiseaseSelect.value?familyDiseaseSelect.selectedOptions[0].textContent:'-';
+  const affectedRelative=document.getElementById('affected_relative').value;
+  const relativeLabels={father:'Father',mother:'Mother',both_parents:'Both parents',other_family_member:'Other family member',unknown:'Unknown'};
   const items=[
     {l:'APGAR Score',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'-'},
     {l:'Gestational Age',v:wk?wk+' weeks':'-'},
     {l:'Birth Weight',v:wt?wt+' '+un:'-'},
     {l:'Mother\'s Age',v:ag?ag+' years':'-'},
     {l:'Child\'s Gender',v:cg?cg:'-'},
-    {l:'Delivery Method',v:dl==='0'?'Vaginal Delivery':dl==='1'?'C-Section':'-'},
-    {l:'Genetic Conditions',v:genOn&&dc.length?dc.length+' condition(s) added':'None'},
+    {l:'Delivery Method',v:dt==='vaginal'?'Vaginal Delivery':dt==='assisted'?'Assisted Delivery':dt==='cesarean'?'Cesarean Section':'-'},
+    {l:'Delivery Complication',v:dcValue==='0'?'No':dcValue==='1'?'Yes':'-'},
+    {l:'Known Family Disease',v:familyStatus==='yes'?'Yes - '+familyDisease:familyStatus==='no'?'No':'Unknown'},
+    {l:'Who Has It',v:familyStatus==='yes'?(relativeLabels[affectedRelative]||'-'):'Not applicable'},
   ];
   document.getElementById('rev-grid').innerHTML=items.map(i=>`<div class="rev-item"><div class="rl">${i.l}</div><div class="rv">${i.v}</div></div>`).join('');
 }
