@@ -35,6 +35,10 @@ class Assessment(db.Model):
         index=True,
     )
 
+    # Assessments are grouped per baby. Nullable keeps legacy rows readable;
+    # new assessments always store the baby's name.
+    baby_name = db.Column(db.String(80), nullable=True, index=True)
+
     # Raw, normalized input values used by the assessment calculation.
     appearance = db.Column(db.SmallInteger, nullable=False)
     pulse = db.Column(db.SmallInteger, nullable=False)

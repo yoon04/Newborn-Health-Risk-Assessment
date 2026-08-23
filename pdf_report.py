@@ -102,6 +102,11 @@ def _bullet_paragraphs(items, style):
     ]
 
 
+def _birth_summary_heading(report):
+    baby_name = str(report.get('baby_name') or '').strip()
+    return f'Birth Summary of {baby_name}' if baby_name else 'Birth Summary'
+
+
 def build_pdf_report(report):
     """Build a detailed PDF that mirrors the web assessment result page."""
     output = BytesIO()
@@ -223,7 +228,7 @@ def build_pdf_report(report):
         ('RIGHTPADDING', (0, 0), (-1, -1), 7), ('TOPPADDING', (0, 0), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
     ]))
-    story.extend([_section_heading('Birth Summary', heading_style), birth_table])
+    story.extend([_section_heading(_birth_summary_heading(report), heading_style), birth_table])
 
     for module in report.get('risk_modules', []):
         risk_index = float(module.get('risk_index', 0))

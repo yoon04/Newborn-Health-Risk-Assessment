@@ -14,6 +14,7 @@ from persistence import ALGORITHM_VERSION, build_assessment_record, save_assessm
 
 def valid_values():
     form = MultiDict({
+        'baby_name': 'Emma',
         'appearance': '2',
         'pulse': '2',
         'grimace': '1',
@@ -115,6 +116,7 @@ class DatabasePersistenceTests(unittest.TestCase):
         stored = db.session.get(Assessment, record.id)
         self.assertIsNotNone(stored)
         self.assertEqual(stored.appearance, 2)
+        self.assertEqual(stored.baby_name, 'Emma')
         self.assertEqual(stored.birth_weight_g, 2400)
         self.assertEqual(stored.raw_inputs['birth_weight'], '2.4')
         self.assertEqual(stored.raw_inputs['weight_unit'], 'kg')

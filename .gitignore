@@ -5,3 +5,5 @@ static/*.png
 .env.*
 !.env.example
 instance/
+.secret_key
+doc_*.env

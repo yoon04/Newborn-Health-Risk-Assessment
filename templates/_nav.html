@@ -1,0 +1,17 @@
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="brand" href="{{ url_for('index') }}">
+      <!-- <span class="brand-mark">👶</span> -->
+      <!-- <span class="brand-text">Newborn Health <em>Risk Assessment</em></span> -->
+    </a>
+    <nav class="nav-links">
+      <a href="{{ url_for('index') }}"{% if active_nav == 'assess' %} class="active"{% endif %}>New Assessment</a>
+      <a href="{{ url_for('assessment_history') }}"{% if active_nav == 'history' %} class="active"{% endif %}>History</a>
+      <a class="profile-chip{% if active_nav == 'profile' %} active{% endif %}" href="{{ url_for('profile') }}" title="View my profile">
+        <span class="avatar">{{ (current_user.name or 'U')[:1]|upper }}</span>
+        <span>{{ current_user.name }}</span>
+      </a>
+      <a class="logout-link" href="{{ url_for('logout') }}">Log out</a>
+    </nav>
+  </div>
+</header>

@@ -7,10 +7,13 @@ from werkzeug.security import generate_password_hash
 import app as application
 from extensions import db
 from models import Assessment, User
+from persistence import build_assessment_record
+from test_database import sample_results, valid_values
 
 
 def valid_form(**overrides):
     data = {
+        'baby_name': 'Baby Emma',
         'appearance': '2',
         'pulse': '2',
         'grimace': '2',
@@ -36,6 +39,7 @@ class SubmissionValidationTests(unittest.TestCase):
         self.assertEqual(errors, {})
         self.assertEqual(rows, [])
         self.assertEqual(values['appearance'], 2)
+        self.assertEqual(values['baby_name'], 'Baby Emma')
         self.assertEqual(values['birth_week'], 38.5)
         self.assertEqual(values['maternal_age'], 28)
         self.assertEqual(values['birth_weight_g'], 3200)
@@ -44,6 +48,20 @@ class SubmissionValidationTests(unittest.TestCase):
         self.assertEqual(values['family_history'], {
             'status': 'no', 'disease': '', 'affected_relative': ''
         })
+
+    def test_baby_name_is_required_and_limited(self):
+        _, errors, _ = application.validate_submission(valid_form(baby_name=''))
+        self.assertIn('baby_name', errors)
+
+        _, errors, _ = application.validate_submission(valid_form(baby_name='   '))
+        self.assertIn('baby_name', errors)
+
+        _, errors, _ = application.validate_submission(valid_form(baby_name='x' * 81))
+        self.assertIn('baby_name', errors)
+
+        values, errors, _ = application.validate_submission(valid_form(baby_name='  Li-Wei '))
+        self.assertEqual(errors, {})
+        self.assertEqual(values['baby_name'], 'Li-Wei')
 
     def test_missing_and_invalid_apgar_values_are_rejected(self):
         for value in ('', '-1', '3', '1.5', 'not-a-number'):
@@ -160,6 +178,46 @@ class RouteValidationTests(unittest.TestCase):
             self.assertIn(f'name="{field}"'.encode(), response.data)
         self.assertNotIn(b'name="apgar_total"', response.data)
 
+    def test_form_collects_baby_name(self):
+        response = self.client.get('/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'name="baby_name"', response.data)
+
+    def test_profile_page_shows_user_and_baby_summary(self):
+        with application.app.app_context():
+            user = User.query.filter_by(email='route-test@example.com').one()
+            values, raw_form = valid_values()
+            record = build_assessment_record(values, sample_results(), raw_form, user.id)
+            db.session.add(record)
+            db.session.commit()
+
+        response = self.client.get('/profile')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Route Test User', response.data)
+        self.assertIn(b'Emma', response.data)
+
+    def test_history_can_be_filtered_by_baby_name(self):
+        with application.app.app_context():
+            user = User.query.filter_by(email='route-test@example.com').one()
+            values, raw_form = valid_values()
+            record = build_assessment_record(values, sample_results(), raw_form, user.id)
+            db.session.add(record)
+            db.session.commit()
+
+        all_history = self.client.get('/assessments')
+        self.assertEqual(all_history.status_code, 200)
+        self.assertIn(b'Emma', all_history.data)
+
+        filtered = self.client.get('/assessments?baby=Emma')
+        self.assertEqual(filtered.status_code, 200)
+        self.assertIn(b'47.8 / 100', filtered.data)
+
+        other_baby = self.client.get('/assessments?baby=Nobody')
+        self.assertEqual(other_baby.status_code, 200)
+        self.assertNotIn(b'47.8 / 100', other_baby.data)
+
     def test_form_uses_only_simple_family_history_questions(self):
         response = self.client.get('/')
 
@@ -182,7 +240,15 @@ class RouteValidationTests(unittest.TestCase):
 
         self.assertNotIn(b'name="user_name"', response.data)
         self.assertNotIn(b'name="user_email"', response.data)
-        self.assertIn(b'Signed in as', response.data)
+        self.assertNotIn(b'Signed in as', response.data)
+
+    def test_pages_share_the_top_navigation(self):
+        for path in ('/', '/assessments', '/profile'):
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200, path)
+            self.assertIn(b'site-nav', response.data)
+            self.assertIn(b'profile-chip', response.data)
+        self.assertNotIn(b'Signed in as', self.client.get('/assessments').data)
 
     def test_logged_out_user_is_redirected_from_protected_history(self):
         self.client.get('/logout')
@@ -224,6 +290,9 @@ class RouteValidationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'APGAR Score Breakdown', response.data)
+        self.assertIn(b'Birth Summary of Baby Emma', response.data)
+        self.assertNotIn(b"Baby&#39;s Name", response.data)
+        self.assertNotIn(b"Baby's Name", response.data)
         self.assertIn(b'Immediate Condition Risk', response.data)
         self.assertIn(b'Birth-Related Risk', response.data)
         self.assertIn(b'Family-History Risk', response.data)

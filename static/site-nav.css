@@ -1,0 +1,15 @@
+/* Shared top navigation bar used by every page for a consistent design. */
+.site-nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid #e2d9cb;box-shadow:0 4px 18px rgba(17,24,39,.05)}
+.nav-inner{max-width:1080px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;font-family:'Plus Jakarta Sans',Arial,sans-serif;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#1f2937;font-weight:700;font-size:14.5px;line-height:1.2}
+.brand em{color:#0f766e;font-style:italic}
+.brand-mark{width:36px;height:36px;border-radius:11px;background:#ecfdf3;border:1px solid #e2d9cb;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nav-links a{text-decoration:none;color:#6b7280;font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;transition:all .2s;white-space:nowrap}
+.nav-links a:hover{color:#0f766e;background:rgba(15,118,110,.07)}
+.nav-links a.active{color:#0f766e;background:rgba(15,118,110,.1)}
+.profile-chip{display:inline-flex!important;align-items:center;gap:8px;border:1px solid #e2d9cb;background:#fff;padding:5px 12px 5px 6px!important;border-radius:999px}
+.profile-chip .avatar{width:26px;height:26px;border-radius:50%;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.logout-link{color:#b91c1c!important}
+.logout-link:hover{background:rgba(220,38,38,.08)!important;color:#dc2626!important}
+@media(max-width:700px){.brand-text{display:none}}

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from flask import Flask, abort, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -17,13 +18,38 @@ from fuzzy_logic import assess_risk, convert_weight_to_grams
 from models import Assessment, User
 from pdf_report import build_pdf_report
 from persistence import save_assessment
-
-# Load project-local configuration before reading DATABASE_URL and SECRET_KEY.
+# Load the project's .env by absolute path so starting Flask from another
+# working directory does not silently skip the SMTP/database configuration.
 # Existing environment variables remain authoritative (override=False).
-load_dotenv()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+
+
+def _resolve_secret_key():
+    """Prefer the configured SECRET_KEY; otherwise reuse a generated key file
+    so browser sessions survive application restarts instead of forcing a
+    new login after every restart."""
+    configured = os.environ.get('SECRET_KEY')
+    if configured:
+        return configured
+    key_path = os.path.join(BASE_DIR, '.secret_key')
+    try:
+        if os.path.exists(key_path):
+            with open(key_path, 'r', encoding='utf-8') as key_file:
+                stored = key_file.read().strip()
+            if stored:
+                return stored
+        generated = secrets.token_hex(32)
+        with open(key_path, 'w', encoding='utf-8') as key_file:
+            key_file.write(generated)
+        return generated
+    except OSError:
+        return secrets.token_hex(32)
+
+
+app.config['SECRET_KEY'] = _resolve_secret_key()
 database_url = os.environ.get('DATABASE_URL', '').strip()
 if database_url.startswith('postgres://'):
     database_url = 'postgresql+psycopg://' + database_url[len('postgres://'):]
@@ -88,6 +114,7 @@ OTHER_FAMILY_DISEASE = ('other_not_listed', 'Other disease / not listed')
 FAMILY_DISEASE_LABELS = dict((*FAMILY_DISEASE_OPTIONS, OTHER_FAMILY_DISEASE))
 MAX_USER_NAME_LENGTH = 120
 MAX_USER_EMAIL_LENGTH = 320
+MAX_BABY_NAME_LENGTH = 80
 USER_EMAIL_PATTERN = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 MIN_PASSWORD_LENGTH = 8
 MIN_BIRTH_WEIGHT_G = 100
@@ -111,6 +138,14 @@ def validate_submission(form):
     """Validate and normalize a submission before fuzzy processing."""
     errors = {}
     values = {}
+
+    raw_baby_name = (form.get('baby_name') or '').strip()
+    if not raw_baby_name:
+        errors['baby_name'] = 'Enter the baby\'s name.'
+    elif len(raw_baby_name) > MAX_BABY_NAME_LENGTH or any(not character.isprintable() for character in raw_baby_name):
+        errors['baby_name'] = f'Baby\'s name must be {MAX_BABY_NAME_LENGTH} or fewer printable characters.'
+    else:
+        values['baby_name'] = raw_baby_name
 
     for field in APGAR_FIELDS:
         raw_value = (form.get(field) or '').strip()
@@ -283,6 +318,7 @@ def build_report_payload(values, results):
 
     return {
         'generated_at': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z'),
+        'baby_name': values.get('baby_name', ''),
         'inputs': {
             'birth_week': values['birth_week'],
             'birth_weight': results['weight_display'],
@@ -441,6 +477,7 @@ def index():
             f"{values['weight_value']} {values['weight_unit']} "
             f"({values['birth_weight_g']:.0f}g)"
         )
+        results['baby_name'] = values.get('baby_name', '')
         results['assessment_id'] = None
         if results.get('overall_risk_index') is not None:
             try:
@@ -492,22 +529,139 @@ def download_report():
 @app.get('/assessments')
 @login_required
 def assessment_history():
+    selected_baby = (request.args.get('baby') or '').strip()
     try:
-        assessments = (
+        query = (
             Assessment.query
             .filter(Assessment.user_id == current_user.id)
-            .order_by(Assessment.created_at.desc())
-            .limit(100)
-            .all()
         )
+        if selected_baby:
+            query = query.filter(Assessment.baby_name == selected_baby)
+        assessments = query.order_by(Assessment.created_at.desc()).limit(100).all()
+        baby_names = [
+            row[0]
+            for row in (
+                db.session.query(Assessment.baby_name)
+                .filter(
+                    Assessment.user_id == current_user.id,
+                    Assessment.baby_name.isnot(None),
+                )
+                .distinct()
+                .order_by(Assessment.baby_name.asc())
+                .all()
+            )
+        ]
     except SQLAlchemyError:
         db.session.rollback()
         return render_template(
             'assessments.html',
             assessments=[],
+            baby_names=[],
+            selected_baby='',
             storage_error='Assessment history is unavailable until the database is configured and migrated.',
         ), 503
-    return render_template('assessments.html', assessments=assessments, storage_error='')
+    return render_template(
+        'assessments.html',
+        assessments=assessments,
+        baby_names=baby_names,
+        selected_baby=selected_baby,
+        storage_error='',
+    )
+
+
+@app.get('/profile')
+@login_required
+def profile():
+    try:
+        total_assessments = (
+            Assessment.query.filter_by(user_id=current_user.id).count()
+        )
+        last_assessment = (
+            Assessment.query
+            .filter_by(user_id=current_user.id)
+            .order_by(Assessment.created_at.desc())
+            .first()
+        )
+        baby_rows = (
+            db.session.query(
+                Assessment.baby_name,
+                func.count(Assessment.id),
+                func.max(Assessment.created_at),
+            )
+            .filter(
+                Assessment.user_id == current_user.id,
+                Assessment.baby_name.isnot(None),
+            )
+            .group_by(Assessment.baby_name)
+            .order_by(func.max(Assessment.created_at).desc())
+            .all()
+        )
+        babies = [
+            {
+                'name': name,
+                'count': count,
+                'last_assessed': last_seen,
+            }
+            for name, count, last_seen in baby_rows
+        ]
+    except SQLAlchemyError:
+        db.session.rollback()
+        return render_template(
+            'profile.html',
+            total_assessments=0,
+            last_assessment=None,
+            babies=[],
+            storage_error='Profile statistics are unavailable until the database is configured and migrated.',
+        ), 503
+    return render_template(
+        'profile.html',
+        total_assessments=total_assessments,
+        last_assessment=last_assessment,
+        babies=babies,
+        storage_error='',
+    )
+
+
+def _replay_assessment(assessment):
+    """Recompute charts/report data deterministically from stored inputs."""
+    values = {
+        'baby_name': assessment.baby_name or '',
+        'appearance': int(assessment.appearance),
+        'pulse': int(assessment.pulse),
+        'grimace': int(assessment.grimace),
+        'activity': int(assessment.activity),
+        'respiration': int(assessment.respiration),
+        'birth_week': float(assessment.birth_week),
+        'weight_value': float(assessment.birth_weight_input),
+        'weight_unit': assessment.birth_weight_unit,
+        'birth_weight_g': int(assessment.birth_weight_g),
+        'maternal_age': int(assessment.maternal_age),
+        'child_gender': assessment.child_gender,
+        'delivery_type': assessment.delivery_type,
+        'delivery_comp': 1 if assessment.delivery_complication else 0,
+        'family_history': {
+            'status': assessment.family_history_status,
+            'disease': assessment.family_disease_name or '',
+            'affected_relative': assessment.family_affected_relative or '',
+        },
+    }
+    results = assess_risk(
+        values['appearance'], values['pulse'], values['grimace'],
+        values['activity'], values['respiration'], values['birth_week'],
+        values['birth_weight_g'], values['maternal_age'], values['delivery_type'],
+        values['delivery_comp'], values['family_history'], values['child_gender'],
+        chart_prefix=f'a{assessment.id}_',
+    )
+    results['weight_display'] = (
+        f"{values['weight_value']} {values['weight_unit']} "
+        f"({values['birth_weight_g']:.0f}g)"
+    )
+    return values, results
+
+
+def _safe_pdf_filename(baby_name):
+    cleaned = re.sub(r'[^A-Za-z0-9_-]+', '_', baby_name or '').strip('_')
+    return f"{(cleaned or 'newborn').lower()}_health_risk_summary.pdf"
 
 
 @app.get('/assessments/<int:assessment_id>')
@@ -521,10 +675,57 @@ def assessment_detail(assessment_id):
         )
     except SQLAlchemyError:
         db.session.rollback()
+        return render_template(
+            'assessment_detail.html',
+            assessment=None,
+            plots={},
+            storage_error='Assessment history is unavailable until the database is configured and migrated.',
+        ), 503
+    if assessment is None:
+        abort(404)
+
+    plots = {}
+    try:
+        _values, _results = _replay_assessment(assessment)
+        plots = _results.get('plot_paths') or {}
+    except Exception:
+        app.logger.exception(
+            'Charts could not be regenerated for assessment %s.', assessment_id
+        )
+    return render_template('assessment_detail.html', assessment=assessment, plots=plots)
+
+
+@app.get('/assessments/<int:assessment_id>/report.pdf')
+@login_required
+def download_saved_report(assessment_id):
+    try:
+        assessment = (
+            Assessment.query
+            .filter_by(id=assessment_id, user_id=current_user.id)
+            .first()
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
         return 'Assessment history is unavailable until the database is configured and migrated.', 503
     if assessment is None:
         abort(404)
-    return render_template('assessment_detail.html', assessment=assessment)
+    try:
+        values, results = _replay_assessment(assessment)
+        report_payload = build_report_payload(values, results)
+    except Exception:
+        app.logger.exception(
+            'PDF report could not be built for assessment %s.', assessment_id
+        )
+        return 'This PDF report could not be generated. Please try again later.', 500
+
+    pdf_stream = build_pdf_report(report_payload)
+    return send_file(
+        pdf_stream,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=_safe_pdf_filename(assessment.baby_name),
+        max_age=0,
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

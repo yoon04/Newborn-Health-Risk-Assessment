@@ -1,5 +1,7 @@
 import unittest
+from io import BytesIO
 
+from pypdf import PdfReader
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import app as application
@@ -114,6 +116,68 @@ class AuthenticationRouteTests(unittest.TestCase):
         self.assertIn(b'47.8 / 100', owner_history.data)
         self.assertEqual(self.client.get(f'/assessments/{record_id}').status_code, 200)
         self.assertNotEqual(owner_id, other_id)
+
+    def test_new_assessment_and_profile_stay_accessible_when_logged_in(self):
+        self.add_user('test@example.com')
+        self.login()
+
+        new_assessment = self.client.get('/')
+        self.assertEqual(new_assessment.status_code, 200)
+
+        profile_page = self.client.get('/profile')
+        self.assertEqual(profile_page.status_code, 200)
+        self.assertIn(b'Test User', profile_page.data)
+
+    def _create_saved_assessment(self, owner_email):
+        owner_id = self.add_user(owner_email, name='Owner')
+        with application.app.app_context():
+            values, raw_form = valid_values()
+            record = build_assessment_record(values, sample_results(), raw_form, owner_id)
+            db.session.add(record)
+            db.session.commit()
+            return record.id
+
+    def test_saved_assessment_detail_matches_main_design_and_offers_pdf(self):
+        record_id = self._create_saved_assessment('detail-owner@example.com')
+
+        self.login('detail-owner@example.com')
+        detail = self.client.get(f'/assessments/{record_id}')
+
+        self.assertEqual(detail.status_code, 200)
+        self.assertIn(b'Birth Summary of Emma', detail.data)
+        self.assertIn(b'Assessment Factors', detail.data)
+        self.assertIn(b'Main Contributing Factors', detail.data)
+        self.assertIn(b'Lower-Impact Factors', detail.data)
+        self.assertIn(b'Birth Chart Summary', detail.data)
+        self.assertIn(f'static/a{record_id}_'.encode(), detail.data)
+        self.assertIn('Download PDF Summary'.encode(), detail.data)
+        self.assertIn(f'/assessments/{record_id}/report.pdf'.encode(), detail.data)
+
+    def test_saved_assessment_pdf_downloads_with_baby_named_file(self):
+        record_id = self._create_saved_assessment('pdf-owner@example.com')
+
+        self.login('pdf-owner@example.com')
+        response = self.client.get(f'/assessments/{record_id}/report.pdf')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, 'application/pdf')
+        self.assertTrue(response.data.startswith(b'%PDF'))
+        reader = PdfReader(BytesIO(response.data))
+        text = '\n'.join(page.extract_text() or '' for page in reader.pages)
+        self.assertIn('Birth Summary of Emma', text)
+
+    def test_saved_assessment_pdf_is_owner_scoped(self):
+        record_id = self._create_saved_assessment('scope-owner@example.com')
+
+        other_id = self.add_user('scope-other@example.com', name='Other')
+        self.assertNotEqual(record_id, other_id)
+        self.login('scope-other@example.com')
+
+        page = self.client.get(f'/assessments/{record_id}')
+        pdf = self.client.get(f'/assessments/{record_id}/report.pdf')
+
+        self.assertEqual(page.status_code, 404)
+        self.assertEqual(pdf.status_code, 404)
 
 
 if __name__ == '__main__':

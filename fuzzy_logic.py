@@ -870,7 +870,7 @@ def build_user_guidance(risk_level, main_factors, lower_impact_factors):
         ],
     }
 
-def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, family_history_items):
+def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, family_history_items, chart_prefix=''):
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
     os.makedirs(static_dir, exist_ok=True)
     plots = {}
@@ -904,8 +904,8 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
         ('Low (0–3)',    [trapezoidal_mf(v,-0.1,0,3,5) for v in x],    '#ef4444'),
         ('Medium (4–6)', [trapezoidal_mf(v,3,4,6,8) for v in x],       '#f59e0b'),
         ('High (7–10)',  [trapezoidal_mf(v,6,7,10,10.1) for v in x],  '#22c55e'),
-    ], "Baby's APGAR Score Interpretation", "APGAR Score (0–10)", "apgar_fuzzy.png", actual_values['apgar'])
-    plots['apgar'] = 'static/apgar_fuzzy.png'
+    ], "Baby's APGAR Score Interpretation", "APGAR Score (0–10)", f"{chart_prefix}apgar_fuzzy.png", actual_values['apgar'])
+    plots['apgar'] = f'static/{chart_prefix}apgar_fuzzy.png'
 
     x = np.linspace(20, 46, 500)
     save_fig(x, [
@@ -913,8 +913,8 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
         ('Preterm (28–37w)',    [trapezoidal_mf(v,28,32,35,37.5) for v in x],   '#ef4444'),
         ('Term (37–42w)',       [trapezoidal_mf(v,35,37,40,42.5) for v in x],   '#22c55e'),
         ('Post-term (>42w)',    [trapezoidal_mf(v,40,42,45,50.1) for v in x],  '#f59e0b'),
-    ], "Gestational Age Interpretation", "Weeks of Pregnancy", "week_fuzzy.png", actual_values['week'])
-    plots['week'] = 'static/week_fuzzy.png'
+    ], "Gestational Age Interpretation", "Weeks of Pregnancy", f"{chart_prefix}week_fuzzy.png", actual_values['week'])
+    plots['week'] = f'static/{chart_prefix}week_fuzzy.png'
 
     x = np.linspace(400, 5500, 500)
     save_fig(x, [
@@ -924,8 +924,8 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
         ('Normal (2.5–4kg)',     [trapezoidal_mf(v,2200,2500,3800,4300) for v in x],   '#22c55e'),
         ('High (4–4.5kg)',       [trapezoidal_mf(v,3600,4000,4600,5200) for v in x],   '#f59e0b'),
         ('Very High (>4.5kg)',   [trapezoidal_mf(v,4500,5000,6000,6000.1) for v in x], '#ef4444'),
-    ], "Birth Weight Interpretation", "Weight (grams)", "weight_fuzzy.png", actual_values['weight'])
-    plots['weight'] = 'static/weight_fuzzy.png'
+    ], "Birth Weight Interpretation", "Weight (grams)", f"{chart_prefix}weight_fuzzy.png", actual_values['weight'])
+    plots['weight'] = f'static/{chart_prefix}weight_fuzzy.png'
 
     x = np.linspace(12, 55, 500)
     save_fig(x, [
@@ -934,8 +934,8 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
         ('Optimal (22–35)',     [trapezoidal_mf(v,22,25,30,35) for v in x], '#22c55e'),
         ('Advanced (35–45)',    [trapezoidal_mf(v,30,35,40,45) for v in x], '#f59e0b'),
         ('Very Advanced (>45)', [trapezoidal_mf(v,40,45,60,60) for v in x], '#ef4444'),
-    ], "Mother's Age Interpretation", "Age (years)", "age_fuzzy.png", actual_values['age'])
-    plots['age'] = 'static/age_fuzzy.png'
+    ], "Mother's Age Interpretation", "Age (years)", f"{chart_prefix}age_fuzzy.png", actual_values['age'])
+    plots['age'] = f'static/{chart_prefix}age_fuzzy.png'
 
     if family_history_items:
         diseases = [item['disease'] for item in family_history_items]
@@ -949,9 +949,9 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
         ax.legend(fontsize=9)
         ax.grid(True, axis='y', alpha=0.3)
         fig.tight_layout()
-        fig.savefig(os.path.join(static_dir, 'genetic_risks.png'), dpi=140, bbox_inches='tight', facecolor='#0f172a')
+        fig.savefig(os.path.join(static_dir, f'{chart_prefix}genetic_risks.png'), dpi=140, bbox_inches='tight', facecolor='#0f172a')
         plt.close(fig)
-        plots['genetic'] = 'static/genetic_risks.png'
+        plots['genetic'] = f'static/{chart_prefix}genetic_risks.png'
     else:
         plots['genetic'] = None
 
@@ -971,15 +971,15 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
     ax.legend(loc='upper left', bbox_to_anchor=(1.02,1), fontsize=9.5, framealpha=0.9)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    fig.savefig(os.path.join(static_dir, 'final_risk.png'), dpi=150, bbox_inches='tight', facecolor='#0f172a')
+    fig.savefig(os.path.join(static_dir, f'{chart_prefix}final_risk.png'), dpi=150, bbox_inches='tight', facecolor='#0f172a')
     plt.close(fig)
-    plots['final'] = 'static/final_risk.png'
+    plots['final'] = f'static/{chart_prefix}final_risk.png'
 
     return centroid, plots
 
 def assess_risk(appearance, pulse, grimace, activity, respiration,
                 birth_week, birth_weight_g, maternal_age, delivery_type, delivery_comp,
-                family_history, child_gender):
+                family_history, child_gender, chart_prefix=''):
     normalized_gender = normalize_gender(child_gender)
     apgar_score, apgar_breakdown, apgar_category, apgar_severity, component_detail = \
         calculate_apgar(appearance, pulse, grimace, activity, respiration)
@@ -1032,7 +1032,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     overall_risk_index, plot_paths = generate_visualizations(
         fuzzy_inputs, final_risk_levels,
         {'apgar': apgar_score, 'week': birth_week, 'weight': birth_weight_g, 'age': maternal_age},
-        family_history_items
+        family_history_items, chart_prefix=chart_prefix
     )
 
     if overall_risk_index < 30:

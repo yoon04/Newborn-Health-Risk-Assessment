@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Newborn Health Risk Assessment</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='site-nav.css') }}">
 <style>
 :root{--bg:#f6f3ee;--surface:#ffffff;--surface2:#f3efe8;--border:#e2d9cb;--accent:#0f766e;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--text:#1f2937;--muted:#6b7280;--card:#ffffff;--shadow:0 18px 50px rgba(17,24,39,.08);--shadow-sm:0 8px 24px rgba(15,23,42,.08);}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -112,10 +113,10 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 </style>
 </head>
 <body>
+{% set active_nav = 'assess' %}{% include '_nav.html' %}
 <div class="hero">
   <h1>Newborn Health <em>Risk Assessment</em></h1>
-  <p>Assess newborn health indicators and generate a clear, summarized risk report.<br>
-    Signed in as <strong>{{ current_user.name }}</strong> · <a href="{{ url_for('logout') }}">Log out</a></p>
+  <p>Assess newborn health indicators with a clear, summarized risk report.</p>
 </div>
 
 <div class="main">
@@ -231,6 +232,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
         <div><h2>Birth Information</h2><p>Gestational age, birth weight, mother's age, and delivery method</p></div>
       </div>
       <div class="card-bd">
+        <div class="fg">
+          <label class="fl">Baby's Name</label>
+          <input type="text" name="baby_name" id="baby_name" class="fi{% if errors.get('baby_name') %} err{% endif %}" maxlength="80" value="{{ form_data.get('baby_name', '') }}" placeholder="e.g. Emma" required>
+          <div class="hint">Results and history are stored under this name so you can track each baby separately.</div>
+          <div class="ferr{% if errors.get('baby_name') %} show{% endif %}" id="err_baby_name">{{ errors.get('baby_name', "Enter the baby's name.") }}</div>
+        </div>
         <div class="irow">
           <div class="fg">
             <label class="fl">Gestational Age (Weeks)</label>
@@ -385,7 +392,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
       </div>
       <div class="card-bd">
         <div class="review-grid" id="rev-grid"></div>
-        <div class="hint" style="margin-top:22px">Signed in as <strong>{{ current_user.name }}</strong> ({{ current_user.email }}). This assessment will be saved to your account.</div>
+        <div class="hint" style="margin-top:22px">This assessment will be saved to your account under the baby's name.</div>
         <div class="nav-bar">
           <button type="button" class="btn btn-ghost" onclick="goPrev(4)">&#x2190; Edit</button>
           <button type="submit" class="btn btn-sub">Calculate Risk Assessment</button>
@@ -399,7 +406,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 <script>
     const SERVER_ERRORS = {{ errors | tojson }};
     const APGAR_FIELDS = ['appearance','pulse','grimace','activity','respiration'];
-    const BIRTH_FIELDS = ['birth_week','birth_weight','maternal_age','child_gender','delivery_type','delivery_comp'];
+    const BIRTH_FIELDS = ['baby_name','birth_week','birth_weight','maternal_age','child_gender','delivery_type','delivery_comp'];
     const serverErrorFields=Object.keys(SERVER_ERRORS);
     let curStep=serverErrorFields.some(f=>APGAR_FIELDS.includes(f))?1:
       serverErrorFields.some(f=>BIRTH_FIELDS.includes(f))?2:
@@ -431,6 +438,7 @@ function validate(s){
     });
   }
   if(s===2){
+    const babyNameRaw=document.getElementById('baby_name').value.trim();
     const weekRaw=document.getElementById('birth_week').value.trim();
     const ageRaw=document.getElementById('maternal_age').value.trim();
     const weightRaw=document.getElementById('birth_weight').value.trim();
@@ -439,6 +447,7 @@ function validate(s){
     const unit=document.getElementById('weight_unit').value;
     const deliveryType=document.querySelector('input[name=delivery_type]:checked');
     const deliveryComp=document.querySelector('input[name=delivery_comp]:checked');
+    if(!babyNameRaw||babyNameRaw.length>80){showE('err_baby_name','baby_name','Enter the baby\'s name.');ok=false;}else hideE('err_baby_name','baby_name');
     if(!weekRaw||!Number.isFinite(w)||w<20||w>45||Math.abs(w*2-Math.round(w*2))>1e-9){showE('err_week','birth_week','Enter a gestational age from 20 to 45 in half-week increments.');ok=false;}else hideE('err_week','birth_week');
     if(!/^\d+$/.test(ageRaw)||!Number.isInteger(a)||a<12||a>60){showE('err_age','maternal_age','Enter a whole-number age between 12 and 60.');ok=false;}else hideE('err_age','maternal_age');
     const weightG=['g','kg','lb'].includes(unit)?toGrams(wt,unit):NaN;
@@ -589,6 +598,7 @@ document.getElementById('mainForm').addEventListener('submit',event=>{
 });
 
 function buildReview(){
+  const babyName=document.getElementById('baby_name').value.trim();
   const fs=['appearance','pulse','grimace','activity','respiration'];
   const t=fs.reduce((s,f)=>s+(apgarVals[f]||0),0);
   const wk=document.getElementById('birth_week').value;
@@ -604,6 +614,7 @@ function buildReview(){
   const affectedRelative=document.getElementById('affected_relative').value;
   const relativeLabels={father:'Father',mother:'Mother',both_parents:'Both parents',other_family_member:'Other family member',unknown:'Unknown'};
   const items=[
+    {l:'Baby\'s Name',v:babyName||'-'},
     {l:'APGAR Score',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'-'},
     {l:'Gestational Age',v:wk?wk+' weeks':'-'},
     {l:'Birth Weight',v:wt?wt+' '+un:'-'},

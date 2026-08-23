@@ -6,6 +6,7 @@ from models import Assessment
 
 ALGORITHM_VERSION = 'fuzzy-v2'
 RAW_INPUT_FIELDS = (
+    'baby_name',
     'appearance', 'pulse', 'grimace', 'activity', 'respiration',
     'birth_week', 'birth_weight', 'weight_unit', 'maternal_age',
     'child_gender', 'delivery_type', 'delivery_comp',
@@ -45,6 +46,7 @@ def build_assessment_record(values, results, raw_form, user_id):
 
     record = Assessment(
         user_id=user_id,
+        baby_name=values.get('baby_name') or None,
         appearance=values['appearance'],
         pulse=values['pulse'],
         grimace=values['grimace'],

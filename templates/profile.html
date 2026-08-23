@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='site-nav.css') }}">
+  <style>
+    :root{--bg:#f6f3ee;--surface:#ffffff;--surface2:#f3efe8;--border:#e2d9cb;--accent:#0f766e;--text:#1f2937;--muted:#6b7280;--shadow:0 18px 50px rgba(17,24,39,.08);--shadow-sm:0 8px 24px rgba(15,23,42,.08)}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:radial-gradient(circle at top,#ffffff 0%,#f6f3ee 50%,#efe9de 100%);color:var(--text);min-height:100vh;padding-bottom:60px}
+    .hero{background:linear-gradient(135deg,#ffffff 0%,#f7f2e9 55%,#f0e6d8 100%);border-bottom:1px solid var(--border);padding:44px 24px 36px;text-align:center}
+    .hero h1{font-family:'Fraunces',serif;font-size:clamp(26px,4.5vw,44px);color:#1b2a2f;margin-bottom:10px}.hero h1 em{color:var(--accent);font-style:italic}
+    .hero p{font-size:14px;color:var(--muted)}
+    main{max-width:1080px;margin:-14px auto 0;padding:0 20px}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:var(--shadow)}
+    .card-title{font-size:16px;font-weight:700;color:#1f2937;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+    .account{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+    .big-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;flex-shrink:0;border:3px solid #ecfdf3;box-shadow:var(--shadow-sm)}
+    .account-info h2{font-family:'Fraunces',serif;font-size:21px;color:#1b2a2f;margin-bottom:4px}
+    .account-info p{font-size:13.5px;color:var(--muted)}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+    .stat{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+    .stat-num{font-family:'Fraunces',serif;font-size:30px;font-weight:700;color:var(--accent);line-height:1.1}
+    .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:6px;font-weight:600}
+    table{width:100%;border-collapse:collapse}
+    th,td{text-align:left;padding:12px;border-bottom:1px solid var(--border);vertical-align:middle}
+    th{background:var(--surface2);color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+    tr:last-child td{border-bottom:none}
+    .baby-cell{display:flex;align-items:center;gap:12px}
+    .baby-avatar{width:38px;height:38px;border-radius:50%;background:#ecfdf3;border:1.5px solid var(--accent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+    .baby-name{font-weight:600;font-size:14.5px}
+    a{text-decoration:none}
+    .view-link{color:var(--accent);font-weight:600;font-size:13px}
+    .view-link:hover{text-decoration:underline}
+    .empty{color:var(--muted);padding:14px 0;font-size:14px}
+    .notice{background:#fff7ed;border:1px solid #fed7aa;padding:12px;border-radius:10px;color:#c2410c;font-size:13px;margin-bottom:16px}
+    @media(max-width:600px){th,td{padding:9px}}
+  </style>
+</head>
+<body>
+{% set active_nav = 'profile' %}{% include '_nav.html' %}
+<div class="hero"><h1>My <em>Profile</em></h1><p>Your account and per-baby assessment overview.</p></div>
+<main>
+
+  <section class="card">
+    <div class="account">
+      <div class="big-avatar">{{ (current_user.name or 'U')[:1]|upper }}</div>
+      <div class="account-info">
+        <h2>{{ current_user.name or 'Unnamed user' }}</h2>
+        <p>{{ current_user.email }}{% if current_user.created_at %} · Member since {{ current_user.created_at.strftime('%B %Y') }}{% endif %}</p>
+      </div>
+    </div>
+  </section>
+
+  {% if storage_error %}<section class="card"><div class="notice">{{ storage_error }}</div></section>{% endif %}
+
+  <section class="card">
+    <div class="card-title">Activity Overview</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-num">{{ total_assessments }}</div><div class="stat-label">Total Assessments</div></div>
+      <div class="stat"><div class="stat-num">{{ babies|length }}</div><div class="stat-label">Babies Tracked</div></div>
+      <div class="stat"><div class="stat-num">{% if last_assessment and last_assessment.created_at %}{{ last_assessment.created_at.strftime('%Y-%m-%d') }}{% else %}-{% endif %}</div><div class="stat-label">Last Assessment</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">Babies</div>
+    <p style="font-size:13px;color:var(--muted);margin:-6px 0 14px">Each baby's assessment results are organized by name. Open a baby to review all of their results.</p>
+    {% if babies %}
+    <table>
+      <thead><tr><th>Baby</th><th>Assessments</th><th>Last Assessed</th><th></th></tr></thead>
+      <tbody>
+      {% for baby in babies %}
+        <tr>
+          <td><span class="baby-cell"><span class="baby-avatar">{{ baby.name[:1]|upper }}</span><span class="baby-name">{{ baby.name }}</span></span></td>
+          <td>{{ baby.count }}</td>
+          <td>{{ baby.last_assessed.strftime('%Y-%m-%d %H:%M') if baby.last_assessed else '-' }}</td>
+          <td><a class="view-link" href="{{ url_for('assessment_history', baby=baby.name) }}">View results &#x2192;</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% elif not storage_error %}
+    <div class="empty">No babies recorded yet. Run an assessment to add the first one.</div>
+    {% endif %}
+  </section>
+
+</main>
+</body>
+</html>
