@@ -159,6 +159,9 @@ class AssessmentExplanationTests(unittest.TestCase):
             'week': 'static/week_fuzzy.png',
             'weight': 'static/weight_fuzzy.png',
             'age': 'static/age_fuzzy.png',
+            'immediate': 'static/immediate_risk.png',
+            'birth': 'static/birth_risk.png',
+            'family': 'static/family_risk.png',
         })
         result['pdf_report_token'] = 'test-token'
 
@@ -170,6 +173,7 @@ class AssessmentExplanationTests(unittest.TestCase):
         self.assertIn('Immediate Condition Risk', html)
         self.assertIn('Birth-Related Risk', html)
         self.assertIn('Family-History Risk', html)
+        self.assertIn('Immediate condition fuzzy output and risk-index centroid', html)
         self.assertIn('Overall Assessment Result', html)
         self.assertIn('Risk Index:', html)
         self.assertIn('Risk Level:', html)

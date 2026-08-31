@@ -870,17 +870,20 @@ def build_user_guidance(risk_level, main_factors, lower_impact_factors):
         ],
     }
 
-def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, family_history_items, chart_prefix=''):
+def generate_visualizations(
+    fuzzy_inputs, final_risk_levels, actual_values, family_history_items,
+    chart_prefix='', module_risk_levels=None,
+):
     static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
     os.makedirs(static_dir, exist_ok=True)
     plots = {}
 
     plt.rcParams.update({
         'font.family': 'DejaVu Sans', 'axes.spines.top': False, 'axes.spines.right': False,
-        'figure.facecolor': '#0f172a', 'axes.facecolor': '#1e293b',
-        'axes.labelcolor': '#94a3b8', 'xtick.color': '#64748b', 'ytick.color': '#64748b',
-        'axes.titlecolor': '#e2e8f0', 'grid.color': '#334155',
-        'text.color': '#e2e8f0', 'legend.facecolor': '#1e293b', 'legend.edgecolor': '#334155',
+        'figure.facecolor': '#ffffff', 'axes.facecolor': '#ffffff',
+        'axes.labelcolor': '#111827', 'xtick.color': '#4b5563', 'ytick.color': '#4b5563',
+        'axes.titlecolor': '#111827', 'axes.edgecolor': '#9ca3af', 'grid.color': '#d9d9d9',
+        'text.color': '#111827', 'legend.facecolor': '#ffffff', 'legend.edgecolor': '#d1d5db',
     })
 
     def save_fig(x_range, curves_data, title, xlabel, filename, user_val):
@@ -889,14 +892,14 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
             ax.plot(x_range, vals, label=label, color=color, linewidth=2)
             ax.fill_between(x_range, 0, vals, alpha=0.07, color=color)
         if user_val is not None:
-            ax.axvline(user_val, color='#f8fafc', linestyle='--', linewidth=2.5, label=f'Your value: {user_val}', zorder=5)
+            ax.axvline(user_val, color='#111827', linestyle='--', linewidth=2.5, label=f'Your value: {user_val}', zorder=5)
         ax.set_title(title, fontsize=12, fontweight='bold', pad=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel('Membership (0–1)', fontsize=10)
         ax.legend(fontsize=8, loc='upper right')
         ax.grid(True, alpha=0.3)
         ax.set_ylim(0, 1.15)
-        fig.savefig(os.path.join(static_dir, filename), dpi=140, bbox_inches='tight', facecolor='#0f172a')
+        fig.savefig(os.path.join(static_dir, filename), dpi=140, bbox_inches='tight', facecolor='#ffffff')
         plt.close(fig)
 
     x = np.linspace(0, 10, 500)
@@ -949,30 +952,84 @@ def generate_visualizations(fuzzy_inputs, final_risk_levels, actual_values, fami
         ax.legend(fontsize=9)
         ax.grid(True, axis='y', alpha=0.3)
         fig.tight_layout()
-        fig.savefig(os.path.join(static_dir, f'{chart_prefix}genetic_risks.png'), dpi=140, bbox_inches='tight', facecolor='#0f172a')
+        fig.savefig(os.path.join(static_dir, f'{chart_prefix}genetic_risks.png'), dpi=140, bbox_inches='tight', facecolor='#ffffff')
         plt.close(fig)
         plots['genetic'] = f'static/{chart_prefix}genetic_risks.png'
     else:
         plots['genetic'] = None
 
-    x_risk, low_mf, mod_mf, high_mf, combined = risk_output_curves(final_risk_levels)
-    denom = simpson(combined, x=x_risk)
-    centroid = simpson(x_risk*combined, x=x_risk)/denom if denom>0 else 0
-    fig, ax = plt.subplots(figsize=(11, 5))
-    ax.plot(x_risk, low_mf,   color='#22c55e', lw=2, label='Low Risk zone')
-    ax.plot(x_risk, mod_mf,   color='#f59e0b', lw=2, label='Moderate Risk zone')
-    ax.plot(x_risk, high_mf,  color='#ef4444', lw=2, label='High Risk zone')
-    ax.plot(x_risk, combined, color='#38bdf8', lw=2.5, linestyle='--', label='Combined Output')
-    ax.axvline(centroid, color='#f8fafc', lw=3, linestyle='--', label=f'Your Risk Index = {centroid:.1f} / 100')
-    ax.fill_between(x_risk, 0, combined, color='#38bdf8', alpha=0.07)
-    ax.set_title("Final Risk Index - Hierarchical Fuzzy Defuzzification", fontsize=14, fontweight='bold')
-    ax.set_xlabel("Risk Index (0-100)   |   lower = less concern   |   higher = more concern", fontsize=11)
-    ax.set_ylabel("Fuzzy Strength (0–1)", fontsize=11)
-    ax.legend(loc='upper left', bbox_to_anchor=(1.02,1), fontsize=9.5, framealpha=0.9)
-    ax.grid(True, alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(os.path.join(static_dir, f'{chart_prefix}final_risk.png'), dpi=150, bbox_inches='tight', facecolor='#0f172a')
-    plt.close(fig)
+    def save_risk_output(levels, title, filename):
+        x_risk, low_mf, mod_mf, high_mf, combined = risk_output_curves(levels)
+        low_shape = np.clip((50 - x_risk) / 25, 0, 1)
+        moderate_shape = np.clip(
+            np.minimum((x_risk - 25) / 25, (75 - x_risk) / 25), 0, 1
+        )
+        high_shape = np.clip((x_risk - 50) / 25, 0, 1)
+        denominator = simpson(combined, x=x_risk)
+        centroid = (
+            simpson(x_risk * combined, x=x_risk) / denominator
+            if denominator > 0 else 0
+        )
+
+        fig, ax = plt.subplots(figsize=(11, 5))
+        for label, shape, clipped, color in (
+            ('Low', low_shape, low_mf, '#22c55e'),
+            ('Moderate', moderate_shape, mod_mf, '#f59e0b'),
+            ('High', high_shape, high_mf, '#ef4444'),
+        ):
+            level_key = label.lower()
+            ax.plot(
+                x_risk, shape, color=color, lw=1.4, linestyle=':', alpha=0.7,
+                label=f'{label} membership',
+            )
+            ax.plot(
+                x_risk, clipped, color=color, lw=2.2,
+                label=f'{label} activation = {levels[level_key]:.2f}',
+            )
+            ax.fill_between(x_risk, 0, clipped, color=color, alpha=0.12)
+
+        ax.plot(
+            x_risk, combined, color='#38bdf8', lw=2.5, linestyle='--',
+            label='Aggregated output',
+        )
+        ax.axvline(
+            centroid, color='#111827', lw=2.5, linestyle='-.',
+            label=f'Risk Index = {centroid:.1f} / 100',
+        )
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel('Risk Index (0-100)', fontsize=11)
+        ax.set_ylabel('Membership Degree (0-1)', fontsize=11)
+        ax.set_xlim(0, 100)
+        ax.set_ylim(0, 1.08)
+        ax.legend(
+            loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=8.5,
+            framealpha=0.9,
+        )
+        ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(
+            os.path.join(static_dir, filename), dpi=150,
+            bbox_inches='tight', facecolor='#ffffff',
+        )
+        plt.close(fig)
+        return centroid
+
+    if module_risk_levels:
+        module_plots = (
+            ('immediate', 'Immediate Condition Risk - Fuzzy Output', 'immediate'),
+            ('birth', 'Birth-Related Risk - Fuzzy Output', 'birth'),
+            ('family', 'Family-History Risk - Fuzzy Output', 'family'),
+        )
+        for plot_key, title, levels_key in module_plots:
+            filename = f'{chart_prefix}{plot_key}_risk.png'
+            save_risk_output(module_risk_levels[levels_key], title, filename)
+            plots[plot_key] = f'static/{filename}'
+
+    centroid = save_risk_output(
+        final_risk_levels,
+        'Final Risk Index - Hierarchical Fuzzy Defuzzification',
+        f'{chart_prefix}final_risk.png',
+    )
     plots['final'] = f'static/{chart_prefix}final_risk.png'
 
     return centroid, plots
@@ -1032,7 +1089,12 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     overall_risk_index, plot_paths = generate_visualizations(
         fuzzy_inputs, final_risk_levels,
         {'apgar': apgar_score, 'week': birth_week, 'weight': birth_weight_g, 'age': maternal_age},
-        family_history_items, chart_prefix=chart_prefix
+        family_history_items, chart_prefix=chart_prefix,
+        module_risk_levels={
+            'immediate': immediate_risk_levels,
+            'birth': birth_risk_levels,
+            'family': family_risk_levels,
+        },
     )
 
     if overall_risk_index < 30:
