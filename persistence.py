@@ -4,7 +4,7 @@ from extensions import db
 from models import Assessment
 
 
-ALGORITHM_VERSION = 'fuzzy-v2'
+ALGORITHM_VERSION = 'fuzzy-v5-module-actions'
 RAW_INPUT_FIELDS = (
     'baby_name',
     'appearance', 'pulse', 'grimace', 'activity', 'respiration',
@@ -29,10 +29,8 @@ def _json_safe(value):
 
 
 def _raw_input_snapshot(raw_form):
-    return {
-        field: str(raw_form.get(field, '') or '')
-        for field in RAW_INPUT_FIELDS
-    }
+    fields = RAW_INPUT_FIELDS + ('apgar_mode',) + tuple(f'apgar_{minute}_{field}' for minute in (1, 5, 10, 15, 20) for field in ('appearance', 'pulse', 'grimace', 'activity', 'respiration', 'support'))
+    return {field: str(raw_form.get(field, '') or '') for field in fields}
 
 
 def _result_snapshot(results):
@@ -91,7 +89,7 @@ def build_assessment_record(values, results, raw_form, user_id):
     return record
 
 
-def save_assessment(values, results, raw_form, user_id):
+def save_assessment(values, results, raw_form, user_id=None):
     """Add and commit one assessment; callers roll back on database errors."""
     record = build_assessment_record(values, results, raw_form, user_id)
     db.session.add(record)

@@ -153,9 +153,41 @@ def build_pdf_report(report):
         _paragraph('Assessment Results', title_style),
         _paragraph('Summary of newborn risk indicators', subtitle_style),
     ]
+    if report.get('recalculation_note'):
+        story.append(_paragraph(report['recalculation_note'], small_style))
     generated_at = report.get('generated_at', '')
     if generated_at:
         story.append(_paragraph(f'Generated: {generated_at}', small_style))
+
+    safety = report.get('safety_override', {})
+    if safety.get('active'):
+        story.append(_section_heading('Urgent APGAR component alert', heading_style))
+        story.extend(_bullet_paragraphs([a['reason'] for a in safety['alerts']], bullet_style))
+        story.append(_paragraph(safety['action'], body_style))
+        story.append(_paragraph('Component safety rules override immediate and overall outputs to High; indices are not probabilities.', body_style))
+
+    for notice in report.get('assessment_notices', []):
+        story.append(_section_heading(notice['reason'], heading_style))
+        story.append(_paragraph(notice['action'], body_style))
+        story.append(_paragraph('This assessment notice raises triage independently of the fuzzy index; it does not prescribe treatment.', small_style))
+
+    timeline = report.get('apgar_timeline', [])
+    if timeline and not report.get('immediate_observation_summary'):
+        story.append(_section_heading('Recorded APGAR observations', heading_style))
+        story.append(_paragraph(f"{report.get('apgar_trend', '')}. Latest recorded observation: {report.get('apgar_reference_minute')} minutes after birth. This historical record does not establish the baby's condition now.", body_style))
+        for minute in sorted({1, 5} | {o['minute'] for o in timeline}):
+            row = next((o for o in timeline if o['minute'] == minute), None)
+            if row:
+                components = ' / '.join(str(row['components'][k]) for k in ('appearance','pulse','grimace','activity','respiration'))
+                story.append(_paragraph(f"{minute} min: A/P/G/A/R {components}; total {row['total']}/10; support: {row['support']}. {row['category']}. Immediate index {row['immediate_index']:.1f}/100 ({row['immediate_level']}). Recommended action: {row['action_label']}.", body_style))
+                story.append(_paragraph(row['action'], body_style))
+                story.extend(_bullet_paragraphs([n['reason'] for n in row['notices'] + row['alerts']], bullet_style))
+            else:
+                story.append(_paragraph(f'{minute} min: Not recorded', body_style))
+        story.append(_paragraph('Earlier concerns remain documented; a higher total does not confirm their resolution. Scores are not averaged. Scores recorded during support require clinician interpretation.', small_style))
+        story.append(_paragraph('Fuzzy inference uses the five components and APGAR total from the latest complete recorded observation, plus delivery complication. Earlier scores provide history, not an averaged input. Risk indices and triage are outputs.', small_style))
+        if report.get('repeat_observation_message'):
+            story.append(_paragraph(report['repeat_observation_message'], body_style))
 
     apgar = report.get('apgar', {})
     apgar_total = int(apgar.get('total', 0))
@@ -308,29 +340,51 @@ def build_pdf_report(report):
             chart_table,
         ]))
 
-    overall_risk_index = float(report.get('overall_risk_index', 0))
-    final_level, final_color = _risk_label(overall_risk_index)
-    overall_box = Table([[
-        Paragraph(
-            f'<font color="{final_color.hexval()}"><b>{overall_risk_index:.1f}</b></font><br/>'
-            '<font size="7" color="#64748B">OF 100</font>',
-            ParagraphStyle('OverallScore', parent=title_style, fontSize=22, leading=24),
-        ),
-        Paragraph(
-            '<b>Hierarchical fuzzy result from immediate, birth-related, and family-history modules</b><br/>'
-            f'Risk Index: <b>{overall_risk_index:.1f} / 100</b> &nbsp; '
-            f'Risk Level: <b>{_escaped(report.get("risk_level", final_level))}</b> &nbsp; '
-            f'Confidence: <b>{_escaped(report.get("confidence_level", "Low"))}</b><br/>'
-            f'{_escaped(report.get("recommendation", ""))}', body_style,
-        ),
-    ]], colWidths=[40 * mm, 134 * mm])
-    overall_box.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), PALE), ('BOX', (0, 0), (-1, -1), 1, final_color),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('LEFTPADDING', (0, 0), (-1, -1), 9),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 9), ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-    ]))
-    story.extend([_section_heading('Overall Assessment Result', heading_style), overall_box])
+    if report.get('immediate_observation_summary'):
+        chart = _scaled_image(plot_paths.get('immediate'), 174 * mm, 82 * mm)
+        if chart is not None:
+            story.append(chart)
+        story.append(_paragraph('Graph interpretation: curves represent fuzzy rule activation; the vertical line marks the centre-of-area risk index. The index is not a probability; component alerts independently guide action.', small_style))
+        story.append(_section_heading('Immediate observation summary and final result', heading_style))
+        story.append(_paragraph(report['immediate_observation_summary'], body_style))
+    if report.get('module_actions'):
+        story.append(_section_heading('Recommended actions by module', heading_style))
+        for action in report['module_actions']:
+            story.append(_paragraph(f"{action['module']}: {action['level']} - {action['priority']}", body_style))
+            story.append(_paragraph(action['action'], body_style))
+    elif report.get('assessment_semantics') == 'separate-v3':
+        story.extend([
+            _section_heading('Overall Triage', heading_style),
+            _paragraph(report.get('overall_triage', ''), body_style),
+            _paragraph(report.get('recommendation', ''), body_style),
+            _paragraph('Immediate condition and birth-related monitoring determine triage. Family history guides follow-up separately.', small_style),
+            _section_heading('Family-History Follow-up Plan', heading_style),
+            _paragraph(report.get('family_history_follow_up', ''), body_style),
+        ])
+    else:
+        overall_risk_index = float(report.get('overall_risk_index', 0))
+        final_level, final_color = _risk_label(overall_risk_index)
+        overall_box = Table([[
+            Paragraph(
+                f'<font color="{final_color.hexval()}"><b>{overall_risk_index:.1f}</b></font><br/>'
+                '<font size="7" color="#64748B">OF 100</font>',
+                ParagraphStyle('OverallScore', parent=title_style, fontSize=22, leading=24),
+            ),
+            Paragraph(
+                '<b>Hierarchical fuzzy result from immediate, birth-related, and family-history modules</b><br/>'
+                f'Risk Index: <b>{overall_risk_index:.1f} / 100</b> &nbsp; '
+                f'Risk Level: <b>{_escaped(report.get("risk_level", final_level))}</b> &nbsp; '
+                f'Confidence: <b>{_escaped(report.get("confidence_level", "Low"))}</b><br/>'
+                f'{_escaped(report.get("recommendation", ""))}', body_style,
+            ),
+        ]], colWidths=[40 * mm, 134 * mm])
+        overall_box.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), PALE), ('BOX', (0, 0), (-1, -1), 1, final_color),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('LEFTPADDING', (0, 0), (-1, -1), 9),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 9), ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.extend([_section_heading('Overall Assessment Result', heading_style), overall_box])
 
     confidence_reasons = report.get('confidence_reasons', [])
     if confidence_reasons:
@@ -398,7 +452,7 @@ def build_pdf_report(report):
         ])
 
     final_chart = _scaled_image(plot_paths.get('final'), 174 * mm, 82 * mm)
-    if final_chart is not None:
+    if final_chart is not None and report.get('assessment_semantics') != 'separate-v3':
         story.append(KeepTogether([
             _section_heading('Overall Risk Index Chart', heading_style), final_chart, Spacer(1, 1.5 * mm),
             _paragraph(

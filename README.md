@@ -273,3 +273,81 @@ flask run --port 5001
 ## Disclaimer
 
 This project is intended for educational decision support. It does not replace professional medical evaluation, diagnosis, or treatment.
+
+
+### Priority 1: APGAR component safety overrides
+
+Before adding the APGAR total, the server validates all five component scores as integers from 0 to 2 and checks heartbeat and breathing independently. Absent heartbeat (pulse 0), heart rate below 100 bpm (pulse 1), absent breathing (respiration 0), or weak/irregular breathing (respiration 1) activate an urgent alert, regardless of total. The form shows the alert even before every field is completed.
+
+For these alerts, the immediate and final fuzzy output memberships become High only. Their displayed indices and charts therefore agree with the overridden classification; the indices are not outcome probabilities or calibrated severity measurements. Original fuzzy indices are retained in `unoverridden_immediate_risk_index` and `unoverridden_final_risk_index`, and `safety_override` records the triggering components and policy version. Alerts appear in recommendations, rule traces, stored result snapshots, and PDF reports. Birth and family modules still describe their own inputs.
+
+This is a conservative educational safety policy, not a validated clinical prediction or resuscitation algorithm. Respiration 1 is broad, so it triggers direct professional assessment rather than a specific treatment instruction. Other component abnormalities remain in the APGAR breakdown and fuzzy assessment; absence of an override does not establish safety. Never delay clinical assessment or resuscitation to complete an APGAR score or this application.
+
+Clinical reference: [2025 AHA/AAP neonatal resuscitation guidance](https://publications.aap.org/pediatrics/article/157/1/e2025074352/205237/Part-5-Neonatal-Resuscitation-2025-American-Heart). The existing fuzzy expert system is knowledge-based AI; this safety layer does not train or clinically validate a machine learning model.
+
+
+### Priority 2: separate assessment domains (fuzzy-v3-separate)
+
+New results show Immediate Condition, Birth-Related Monitoring, Family-History Follow-up, and Overall Triage. Family-history rules HR-04 and HR-07 have been removed from acute inference. Family history cannot change immediate/birth outputs, acute guidance, or triage. Its follow-up plan is separate and may suggest discussing genetic counselling or disease-specific screening with the clinician. Unknown history is displayed as Unknown, not as reassuring low risk.
+
+Triage is an educational action policy: High immediate condition or a component safety override means Urgent evaluation; Moderate immediate condition or Moderate/High birth-related monitoring means Closer monitoring and professional review; otherwise Routine care and observation. High birth-related monitoring alone is not labelled an acute emergency. Symptoms still require direct clinical assessment regardless of these classifications.
+
+The old overall index fields remain internally for schema/backward compatibility, but new result pages, saved details, history rows and PDFs do not present a combined Overall Risk Index. Separate module indices are heuristic fuzzy indices, not disease probabilities. New saved snapshots include the triage and follow-up plan and use algorithm version `fuzzy-v3-separate`. Older saved results are labelled legacy and remain unchanged; downloading their PDF recomputes using the current algorithm, so it can differ from the original snapshot.
+
+Reference: [CDC: Family Health History and Your Child](https://www.cdc.gov/family-health-history/family-health-history-and-you/family-health-history-and-your-child.html).
+
+
+### Colour notice and maternal-age review (fuzzy-v3.1-colour-age)
+
+Appearance 0 (blue/pale all over) now generates a separate direct-assessment notice before APGAR summation. It is visible as soon as selected on the form, in results, saved snapshots, and PDF reports. The notice sets Overall Triage to Urgent evaluation independently of the numeric immediate index; it does not force fuzzy High memberships or prescribe oxygen/treatment. Heartbeat and breathing overrides still take precedence. Colour alone cannot establish oxygenation, and a reassuring total cannot dismiss the notice. Appearance 1 (blue hands/feet only) does not trigger this notice.
+
+Maternal-age memberships are heuristic context curves: very-young (-0.1, 0, 15, 18), adolescent (15, 18, 18, 20), typical (18, 20, 35, 40), older (35, 40, 45, 50), very-advanced (40, 45, 60, 60.1). These are trapezoid parameters, with overlapping ramps; age 20–34 has only typical membership. Age 23 no longer activates BR-13. The ramps remain unvalidated project assumptions, not clinical cut-offs or calibrated probabilities. Charts use the same membership function as inference to avoid drift.
+
+For the reported example (APGAR 0/2/1/2/2, 38 weeks, 3200 g, age 23, no complication), immediate index stays 28.6, birth monitoring becomes Low (19.4), and the separate colour notice sets triage to Urgent evaluation. Family-history follow-up remains separate. Older stored snapshots are unchanged; charts are regenerated only for snapshots using this policy, and saved PDF downloads identify recalculation with the current policy.
+
+Sources: [WHO adolescent pregnancy](https://www.who.int/en/news-room/fact-sheets/detail/adolescent-pregnancy), [ACOG pregnancy at age 35 or older](https://www.acog.org/clinical/clinical-guidance/obstetric-care-consensus/articles/2022/08/pregnancy-at-age-35-years-or-older), [AAP APGAR limitations](https://publications.aap.org/pediatrics/article/136/4/819/73821/The-Apgar-Score).
+
+
+### Timed APGAR observations (fuzzy-v4-timed-apgar)
+
+The web form has a 1-minute column (optional when not recorded), a required 5-minute column, and optional fresh observations at 10/15/20 minutes. Birth and family inputs are entered once. Each recorded time point requires all five components and includes support/resuscitation status (none, provided, or unknown). Blank optional observations are displayed as Not recorded; no copying, interpolation, or averaging occurs. This is documentation of clinical observations, not an automated monitor or a delivery-room treatment algorithm.
+
+The latest recorded observation supplies the immediate-condition fuzzy input and component notices; every earlier total, component set, alert, and support status remains in the timeline. The result and PDF show the reference minute, change from 1 minute to the latest recording, and a reminder that historical observations do not establish the baby's current condition or resolve earlier concerns. Birth-related monitoring and family follow-up remain separate.
+
+When the 5-minute status is not green, the form and report suggest fresh repeat observations. The ACOG/AAP guideline criterion is total below 7 at 5 minutes; this app also suggests clinician reassessment when component notices make the status non-green despite a higher total. Grimace/activity 0 generate urgent direct-assessment notices; score 1 generates professional-reassessment notices; score 2 generates no additional notice. These notices affect triage without forcing the numeric fuzzy output to High. Heartbeat/breathing overrides retain precedence. Exact software notice and inference rules remain heuristic and require clinical review.
+
+Timed observations are stored in the existing JSON result snapshot and raw input fields; no database schema migration is needed. Saved PDF recalculation reuses the full timeline. Legacy single-observation submissions remain supported as untimed records, and older snapshots are not relabelled as timed. Run a new assessment to use the new form.
+
+Reference: [ACOG: The Apgar Score](https://www.acog.org/clinical/clinical-guidance/committee-opinion/articles/2015/10/the-apgar-score).
+
+
+### Staff UI correction (fuzzy-v4.1-total-status)
+
+The compact component table now shows matching 1-minute and 5-minute columns. APGAR total colour reflects only the numeric total: 7–10 green, 4–6 amber, 0–3 red. Safety overrides and component review notices are separate; they do not recolour the total or trigger scheduled repeat scoring by themselves. The prior “non-green” repeat rule is superseded: only a 5-minute total below 7 indicates repeat scoring. Once a recorded repeat reaches at least 7, the report describes recorded improvement rather than prompting another scheduled repeat; current component concerns still require clinical assessment. At 20 minutes the recording window is complete.
+
+The result and PDF explain that the latest complete recorded component set supplies the APGAR sum used by immediate fuzzy inference, alongside delivery complication. Previous observations supply history and trend. Numeric risk indices and triage are outputs; they are not entered back as APGAR inputs. This remains an educational decision-support prototype requiring clinical validation before routine clinical use.
+
+
+### Immediate-condition results by time (fuzzy-v5-module-actions)
+
+Each recorded APGAR observation has a separate result card: nominal time after birth, five components, APGAR total, immediate fuzzy index/level, support status, component concerns and recommended action. The latest complete observation is marked as the inference reference. Additional observations are shown only if recorded; empty 10/15/20-minute slots are not printed in normal results or PDF. On the form, additional rows are hidden unless the 5-minute total is below 7, a repeat has already been entered, or the clinician explicitly adds an observation.
+
+The assessment path no longer performs hierarchical combined-risk inference or creates a combined-risk chart. It returns three separate module action plans. Immediate recommendations depend only on immediate inputs and component safety checks; birth monitoring and family follow-up have their own recommendations. For compatibility with existing non-null database columns and older clients, `overall_risk_index`, `risk_level` and `final_risk_levels` mirror the immediate module, while `overall_triage` mirrors the immediate action label; they are not combined results and are not displayed as an overall score. Existing schemas require no migration. New code should use module fields and `module_actions`.
+
+Per-time outputs are heuristic decision-support results, not trained outcome predictions. Support status is documented for clinical interpretation; it does not yet have a validated numeric adjustment. Machine learning is deferred until outcome-labelled data, prediction time and clinical validation are defined.
+
+
+### Shared staff dashboard and concise immediate summary
+
+Authentication is removed from the dashboard workflow. Staff can create assessments, view shared history, open any saved record and download PDFs without an account. New assessments have a nullable owner; existing user-linked records remain accessible in shared history. Old login/register/logout URLs redirect to the dashboard without creating accounts; existing user records are retained for database compatibility. No schema migration is required. Access to this deployment now grants access to its assessment data, so the intended deployment is a staff-accessible local/internal environment.
+
+All observation inputs now have clinical option descriptions and matching total rings for 1, 5, 10, 15 and 20 minutes. Repeat inputs remain conditional. The final immediate module presents its graph explanation followed by one paragraph covering the observations recorded, latest inference reference, final immediate index and recommended action. The complete timeline is retained in the saved snapshot; the final results and PDF use a concise summary rather than repeating every observation card.
+
+
+### APGAR dashboard presentation
+
+Results and saved assessments use a wider responsive layout. Each module graph has a short caption; the immediate module separates recorded facts and its final index, care concerns, and recommended actions. The latest complete observation remains the fuzzy inference input, without averaging timed scores.
+
+Additional inputs start hidden. A complete 5-minute APGAR below 7 enables **+ 5 minutes**, which opens only the 10-minute observation. Complete that observation before adding 15 minutes, then 20 minutes if the preceding total remains below 7. A repeat total of 7 or more stops further prompts; recorded observations and component concerns remain available. This form records fresh observations and does not schedule or perform clinical reassessment automatically.
+
+UI control regression check: `node tests/repeat_observation_ui.cjs`.

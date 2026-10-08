@@ -7,3 +7,14 @@ static/*.png
 instance/
 .secret_key
 doc_*.env
+
+# Local environment and temporary build files
+.venv/
+tmp/
+
+# Paper, presentation, and report artifacts
+.codex-doc-review/
+.presentation-build/
+paper_figures/
+output/
+NeoHealth-V1correction.docx

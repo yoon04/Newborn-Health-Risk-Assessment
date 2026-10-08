@@ -1,3 +1,4 @@
+from apgar_observations import parse_observations
 import math
 import os
 import re
@@ -7,13 +8,12 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from flask import Flask, abort, redirect, render_template, request, send_file, url_for
-from flask_login import current_user, login_required, login_user, logout_user
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from extensions import db, login_manager, migrate
+from extensions import db, migrate
 from fuzzy_logic import assess_risk, convert_weight_to_grams
 from models import Assessment, User
 from pdf_report import build_pdf_report
@@ -63,20 +63,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 migrate.init_app(app, db)
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-login_manager.login_message = 'Please log in to continue.'
-login_manager.login_message_category = 'info'
 REPORT_TOKEN_MAX_AGE_SECONDS = 60 * 60
 
-
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        return db.session.get(User, int(user_id))
-    except (TypeError, ValueError, SQLAlchemyError):
-        db.session.rollback()
-        return None
 
 if not os.path.exists('static'):
     os.makedirs('static')
@@ -153,6 +141,12 @@ def validate_submission(form):
             errors[field] = 'Select an APGAR score of 0, 1, or 2.'
         else:
             values[field] = int(raw_value)
+
+    observations, observation_errors = parse_observations(form, {k: values[k] for k in APGAR_FIELDS if k in values})
+    errors.update(observation_errors)
+    if observations:
+        values['apgar_observations'] = observations
+        values.update(max(observations, key=lambda o: o['minute'])['components'])
 
     raw_week = (form.get('birth_week') or '').strip()
     birth_week = _parse_finite_number(raw_week)
@@ -317,6 +311,20 @@ def build_report_payload(values, results):
     ]
 
     return {
+        'immediate_observation_summary': results.get('immediate_observation_summary', ''),
+        'module_actions': results.get('module_actions', []),
+        'inference_input_summary': results.get('inference_input_summary', {}),
+        'repeat_observation_status': results.get('repeat_observation_status'),
+        'apgar_timeline': results.get('apgar_timeline', []),
+        'apgar_trend': results.get('apgar_trend', ''),
+        'apgar_reference_minute': results.get('apgar_reference_minute'),
+        'repeat_observation_message': results.get('repeat_observation_message', ''),
+        'assessment_notices': results.get('assessment_notices', []),
+        'assessment_policy_version': results.get('assessment_policy_version'),
+        'overall_triage': results.get('overall_triage'),
+        'family_history_follow_up': results.get('family_history_follow_up'),
+        'assessment_semantics': results.get('assessment_semantics'),
+        'safety_override': results.get('safety_override', {}),
         'generated_at': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z'),
         'baby_name': values.get('baby_name', ''),
         'inputs': {
@@ -348,7 +356,7 @@ def build_report_payload(values, results):
                 ),
             },
             {
-                'name': 'Birth-Related Risk',
+                'name': 'Birth-Related Monitoring',
                 'label': 'Birth Risk',
                 'risk_index': float(results['birth_related_risk_index']),
                 'level': results['birth_related_risk_level'],
@@ -358,10 +366,10 @@ def build_report_payload(values, results):
                 ),
             },
             {
-                'name': 'Family-History Risk',
+                'name': 'Family-History Follow-up',
                 'label': 'Family Risk',
                 'risk_index': float(results['family_history_risk_index']),
-                'level': results['family_history_risk_level'],
+                'level': results.get('family_history_follow_up_level', results['family_history_risk_level']),
                 'description': results['family_history_summary'],
             },
         ],
@@ -381,81 +389,14 @@ def build_report_payload(values, results):
 
 
 @app.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-
-    errors = {}
-    form_data = {}
-    if request.method == 'POST':
-        form_data = request.form.to_dict(flat=True)
-        values, errors = validate_registration(request.form)
-        if not errors:
-            try:
-                if User.query.filter_by(email=values['email']).first() is not None:
-                    errors['email'] = 'An account with this email already exists.'
-                else:
-                    user = User(
-                        name=values['name'],
-                        email=values['email'],
-                        password_hash=generate_password_hash(values['password']),
-                    )
-                    db.session.add(user)
-                    db.session.commit()
-                    login_user(user)
-                    return redirect(url_for('index'))
-            except IntegrityError:
-                db.session.rollback()
-                errors['email'] = 'An account with this email already exists.'
-            except SQLAlchemyError:
-                db.session.rollback()
-                app.logger.exception('User registration could not be saved.')
-                errors['form'] = 'Registration is temporarily unavailable. Please try again.'
-
-    return render_template('register.html', errors=errors, form_data=form_data)
-
-
 @app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('index'))
-
-    errors = {}
-    form_data = {}
-    next_url = request.args.get('next', '')
-    if request.method == 'POST':
-        form_data = request.form.to_dict(flat=True)
-        email = (request.form.get('email') or '').strip().lower()
-        password = request.form.get('password') or ''
-        next_url = request.form.get('next') or next_url
-        try:
-            user = User.query.filter_by(email=email).first() if email else None
-            if user is not None and user.password_hash and check_password_hash(user.password_hash, password):
-                login_user(user)
-                return redirect(_safe_next_url(next_url) or url_for('index'))
-            errors['form'] = 'Invalid email or password.'
-        except SQLAlchemyError:
-            db.session.rollback()
-            app.logger.exception('Login lookup failed.')
-            errors['form'] = 'Login is temporarily unavailable. Please try again.'
-
-    return render_template(
-        'login.html',
-        errors=errors,
-        form_data=form_data,
-        next_url=_safe_next_url(next_url) or '',
-    )
-
-
 @app.get('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('login'))
+def retired_authentication():
+    """Keep old bookmarks usable without authenticating or creating accounts."""
+    return redirect(url_for('index'))
 
 
 @app.route('/', methods=['GET', 'POST'])
-@login_required
 def index():
     if request.method == 'POST':
         values, errors, family_rows = validate_submission(request.form)
@@ -472,6 +413,7 @@ def index():
             values['activity'], values['respiration'], values['birth_week'],
             values['birth_weight_g'], values['maternal_age'], values['delivery_type'],
             values['delivery_comp'], values['family_history'], values['child_gender'],
+            apgar_observations=values.get('apgar_observations'),
         )
         results['weight_display'] = (
             f"{values['weight_value']} {values['weight_unit']} "
@@ -485,7 +427,7 @@ def index():
                     values,
                     results,
                     request.form.to_dict(flat=True),
-                    current_user.id,
+                    None,
                 )
                 results['assessment_id'] = stored_assessment.id
             except SQLAlchemyError:
@@ -503,7 +445,6 @@ def index():
 
 
 @app.post('/report.pdf')
-@login_required
 def download_report():
     token = (request.form.get('report_token') or '').strip()
     try:
@@ -527,13 +468,11 @@ def download_report():
 
 
 @app.get('/assessments')
-@login_required
 def assessment_history():
     selected_baby = (request.args.get('baby') or '').strip()
     try:
         query = (
             Assessment.query
-            .filter(Assessment.user_id == current_user.id)
         )
         if selected_baby:
             query = query.filter(Assessment.baby_name == selected_baby)
@@ -543,7 +482,6 @@ def assessment_history():
             for row in (
                 db.session.query(Assessment.baby_name)
                 .filter(
-                    Assessment.user_id == current_user.id,
                     Assessment.baby_name.isnot(None),
                 )
                 .distinct()
@@ -570,56 +508,8 @@ def assessment_history():
 
 
 @app.get('/profile')
-@login_required
 def profile():
-    try:
-        total_assessments = (
-            Assessment.query.filter_by(user_id=current_user.id).count()
-        )
-        last_assessment = (
-            Assessment.query
-            .filter_by(user_id=current_user.id)
-            .order_by(Assessment.created_at.desc())
-            .first()
-        )
-        baby_rows = (
-            db.session.query(
-                Assessment.baby_name,
-                func.count(Assessment.id),
-                func.max(Assessment.created_at),
-            )
-            .filter(
-                Assessment.user_id == current_user.id,
-                Assessment.baby_name.isnot(None),
-            )
-            .group_by(Assessment.baby_name)
-            .order_by(func.max(Assessment.created_at).desc())
-            .all()
-        )
-        babies = [
-            {
-                'name': name,
-                'count': count,
-                'last_assessed': last_seen,
-            }
-            for name, count, last_seen in baby_rows
-        ]
-    except SQLAlchemyError:
-        db.session.rollback()
-        return render_template(
-            'profile.html',
-            total_assessments=0,
-            last_assessment=None,
-            babies=[],
-            storage_error='Profile statistics are unavailable until the database is configured and migrated.',
-        ), 503
-    return render_template(
-        'profile.html',
-        total_assessments=total_assessments,
-        last_assessment=last_assessment,
-        babies=babies,
-        storage_error='',
-    )
+    return redirect(url_for('assessment_history'))
 
 
 def _replay_assessment(assessment):
@@ -645,12 +535,14 @@ def _replay_assessment(assessment):
             'affected_relative': assessment.family_affected_relative or '',
         },
     }
+    values['apgar_observations'] = (assessment.result_snapshot or {}).get('apgar_timeline') or None
     results = assess_risk(
         values['appearance'], values['pulse'], values['grimace'],
         values['activity'], values['respiration'], values['birth_week'],
         values['birth_weight_g'], values['maternal_age'], values['delivery_type'],
         values['delivery_comp'], values['family_history'], values['child_gender'],
         chart_prefix=f'a{assessment.id}_',
+        apgar_observations=values.get('apgar_observations'),
     )
     results['weight_display'] = (
         f"{values['weight_value']} {values['weight_unit']} "
@@ -665,12 +557,11 @@ def _safe_pdf_filename(baby_name):
 
 
 @app.get('/assessments/<int:assessment_id>')
-@login_required
 def assessment_detail(assessment_id):
     try:
         assessment = (
             Assessment.query
-            .filter_by(id=assessment_id, user_id=current_user.id)
+            .filter_by(id=assessment_id)
             .first()
         )
     except SQLAlchemyError:
@@ -686,8 +577,9 @@ def assessment_detail(assessment_id):
 
     plots = {}
     try:
-        _values, _results = _replay_assessment(assessment)
-        plots = _results.get('plot_paths') or {}
+        if (assessment.result_snapshot or {}).get('assessment_policy_version') == 'fuzzy-v5-module-actions':
+            _values, _results = _replay_assessment(assessment)
+            plots = _results.get('plot_paths') or {}
     except Exception:
         app.logger.exception(
             'Charts could not be regenerated for assessment %s.', assessment_id
@@ -696,12 +588,11 @@ def assessment_detail(assessment_id):
 
 
 @app.get('/assessments/<int:assessment_id>/report.pdf')
-@login_required
 def download_saved_report(assessment_id):
     try:
         assessment = (
             Assessment.query
-            .filter_by(id=assessment_id, user_id=current_user.id)
+            .filter_by(id=assessment_id)
             .first()
         )
     except SQLAlchemyError:
@@ -712,6 +603,7 @@ def download_saved_report(assessment_id):
     try:
         values, results = _replay_assessment(assessment)
         report_payload = build_report_payload(values, results)
+        report_payload['recalculation_note'] = ('Recomputed with ' + results.get('assessment_policy_version', 'current policy') + ' from saved inputs. The original assessment used ' + assessment.algorithm_version + '.')
     except Exception:
         app.logger.exception(
             'PDF report could not be built for assessment %s.', assessment_id

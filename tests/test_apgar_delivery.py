@@ -18,9 +18,9 @@ from fuzzy_logic import (
 
 class ApgarTests(unittest.TestCase):
     def test_total_and_category_are_derived_from_five_components(self):
-        score, _breakdown, category, severity, details = calculate_apgar(2, 2, 1, 1, 1)
+        score, _breakdown, category, severity, details = calculate_apgar(1, 2, 2, 2, 2)
 
-        self.assertEqual(score, 7)
+        self.assertEqual(score, 9)
         self.assertEqual(category, 'Normal (7–10)')
         self.assertEqual(severity, 'good')
         self.assertEqual(len(details), 5)

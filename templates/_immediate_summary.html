@@ -1,0 +1,6 @@
+    <div class="immediate-summary">
+      <section><h3>Immediate observation summary and final result</h3><ul>{% for fact in results.get('immediate_facts', [results.immediate_observation_summary]) %}<li>{{ fact }}</li>{% endfor %}</ul></section>
+      <section><h3>Care concerns</h3><ul>{% for concern in results.get('immediate_care_concerns', []) %}<li>{{ concern }}</li>{% endfor %}</ul></section>
+      <section><h3>Recommended actions</h3><ul>{% for action in results.get('immediate_recommended_actions', [results.recommendation]) %}<li>{{ action }}</li>{% endfor %}</ul></section>
+    </div>
+    <p class="observation-footnote">Recorded observations describe the assessed times; they do not establish the baby's current condition or a diagnosis.</p>

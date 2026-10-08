@@ -49,15 +49,15 @@
   {% endif %}
   {% if assessments %}
   <table>
-    <thead><tr><th>Date</th><th>Baby</th><th>APGAR</th><th>Risk Index</th><th>Risk Level</th><th>Confidence</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Baby</th><th>APGAR</th><th>Immediate action</th><th>Result Version</th><th>Confidence</th><th></th></tr></thead>
     <tbody>
     {% for assessment in assessments %}
       <tr>
         <td>{{ assessment.created_at.strftime('%Y-%m-%d %H:%M') if assessment.created_at else '-' }}</td>
         <td>{{ assessment.baby_name or '-' }}</td>
         <td>{{ assessment.apgar_total }} / 10</td>
-        <td>{{ '%.1f'|format(assessment.overall_risk_index|float) }} / 100</td>
-        <td>{{ assessment.risk_level }}</td>
+        <td>{{ (assessment.result_snapshot or {}).get('overall_triage', 'Legacy combined result: ' ~ assessment.risk_level) }}</td>
+        <td>{{ assessment.algorithm_version }}</td>
         <td>{{ assessment.confidence_level }}</td>
         <td><a href="{{ url_for('assessment_detail', assessment_id=assessment.id) }}">View</a></td>
       </tr>

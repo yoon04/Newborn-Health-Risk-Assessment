@@ -1,3 +1,4 @@
+from apgar_safety import check_apgar_safety
 import numpy as np
 from scipy.integrate import simpson  # For defuzzification
 import ast  # For parsing inherited string to list (not used now, but kept for potential future)
@@ -27,6 +28,7 @@ def trapezoidal_mf(x, a, b, c, d):
 # Calculate APGAR score from individual components and categorize
 def calculate_apgar(appearance, pulse, grimace, activity, respiration):
     """Calculate total APGAR score (0-10) from components (each 0-2)."""
+    safety = check_apgar_safety(appearance, pulse, grimace, activity, respiration)
     apgar = appearance + pulse + grimace + activity + respiration
     apgar = min(max(apgar, 0), 10)  # Clamp to 0-10
     
@@ -37,6 +39,10 @@ def calculate_apgar(appearance, pulse, grimace, activity, respiration):
     else:
         category = "Low (0-3) - Requires immediate medical attention."
     
+    if safety['active']:
+        category = 'Urgent component alert'
+    if safety['notices'] and not safety['active']:
+        category = 'Colour assessment needed'
     breakdown = f"APGAR Score: {apgar}/10 ({category}) (Appearance: {appearance}/2 - skin color; Pulse: {pulse}/2 - heart rate; Grimace: {grimace}/2 - reflex; Activity: {activity}/2 - muscle tone; Respiration: {respiration}/2 - breathing)"
     return apgar, breakdown
 
@@ -60,9 +66,9 @@ def fuzzify_birth_weight(weight):  # in grams
     return {'low': low, 'normal': normal, 'high': high}
 
 def fuzzify_maternal_age(age):
-    young = trapezoidal_mf(age, 0, 10, 18, 25)
-    normal = trapezoidal_mf(age, 20, 25, 30, 35)
-    advanced = trapezoidal_mf(age, 30, 35, 45, 60)
+    young = trapezoidal_mf(age, -0.1, 0, 18, 20)
+    normal = trapezoidal_mf(age, 18, 20, 35, 40)
+    advanced = trapezoidal_mf(age, 35, 40, 60, 60.1)
     return {'young': young, 'normal': normal, 'advanced': advanced}
 
 def fuzzify_delivery_comp(delivery_comp):  # 0=Normal Vaginal, 1=Cesarean Section
@@ -169,7 +175,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration, birth_week, b
     risk_levels = apply_rules(fuzzy_inputs)
     overall_risk_prob = defuzzify(risk_levels)
     inherited_prob, inherited_explanation = estimate_inherited_prob(inherited_diseases)
-    total_risk = (overall_risk_prob + inherited_prob * 100) / 2  # Combined estimate
+    total_risk = overall_risk_prob  # Legacy acute index; family history remains separate.
     
     # Parent/Doctor-friendly conclusion
     if total_risk < 30:
@@ -182,10 +188,20 @@ def assess_risk(appearance, pulse, grimace, activity, respiration, birth_week, b
         risk_level = "High"
         recommendation = "Fuzzy logic highlights high risks due to combined imprecise indicators (e.g., low APGAR with preterm). Immediate medical attention advised."
     
+    safety = check_apgar_safety(appearance, pulse, grimace, activity, respiration)
+    if safety['active']:
+        risk_level = 'High'
+        recommendation = safety['action']
+    if safety['notices'] and not safety['active']:
+        recommendation = safety['notices'][0]['action']
     delivery_type = "Normal Vaginal Delivery" if delivery_comp == 0 else "Cesarean Section"
-    conclusion = f"{risk_level} health risk. {apgar_breakdown}. Birth at {birth_week} weeks, weight {birth_weight}g, maternal age {maternal_age}, delivery: {delivery_type}. Overall fuzzy risk from birth factors: {overall_risk_prob:.2f}% (accounts for uncertainties). Inherited risks: {inherited_prob * 100:.2f}% ({inherited_explanation}). Total: {total_risk:.2f}%. {recommendation}"
+    conclusion = f"{risk_level} health risk. {apgar_breakdown}. Birth at {birth_week} weeks, weight {birth_weight}g, maternal age {maternal_age}, delivery: {delivery_type}. Overall fuzzy risk from birth factors: {overall_risk_prob:.2f}% (accounts for uncertainties). Inherited risks: {inherited_prob * 100:.2f}% ({inherited_explanation}). Family history does not change the acute classification. {recommendation}"
     
     return {
+        'assessment_notices': safety['notices'],
+        'safety_override': safety,
+        'risk_level': risk_level,
+        'recommendation': recommendation,
         'overall_risk_probability': overall_risk_prob,
         'inherited_disease_probability': inherited_prob * 100,
         'total_risk_probability': total_risk,

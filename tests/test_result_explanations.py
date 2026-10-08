@@ -138,7 +138,7 @@ class AssessmentExplanationTests(unittest.TestCase):
             {'status': 'no', 'disease': '', 'affected_relative': ''}, 'female',
         )
 
-        self.assertEqual(result['overall_risk_index'], 65.0)
+        self.assertEqual(result['overall_risk_index'], result['immediate_condition_risk_index'])
         self.assertIn(result['risk_level'], {'Low', 'Moderate', 'High'})
         self.assertIn(result['confidence_level'], {'Low', 'Moderate', 'High'})
         self.assertTrue(result['main_contributing_factors'])
@@ -171,13 +171,14 @@ class AssessmentExplanationTests(unittest.TestCase):
         self.assertIn('APGAR Score Breakdown', html)
         self.assertIn('Birth Summary', html)
         self.assertIn('Immediate Condition Risk', html)
-        self.assertIn('Birth-Related Risk', html)
-        self.assertIn('Family-History Risk', html)
+        self.assertIn('Birth-Related Monitoring', html)
+        self.assertIn('Family-History Follow-up', html)
         self.assertIn('Immediate condition fuzzy output and risk-index centroid', html)
-        self.assertIn('Overall Assessment Result', html)
+        self.assertIn('Recommended actions by module', html)
+        self.assertNotIn('Overall Risk Index Chart', html)
         self.assertIn('Risk Index:', html)
-        self.assertIn('Risk Level:', html)
-        self.assertIn('Confidence:', html)
+        self.assertIn('Level:', html)
+        self.assertIn('Confidence Basis', html)
         self.assertIn('Important Triggered Fuzzy Rules', html)
         self.assertNotIn('65.0% risk', html)
 

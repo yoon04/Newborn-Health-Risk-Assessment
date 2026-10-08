@@ -1,0 +1,14 @@
+{% if timeline %}
+<div class="score-card card"><h2>Immediate condition by observation time</h2><p>Recorded APGAR observations · APGAR Score Breakdown</p><p>{{ trend }}. Latest complete observation: <strong>{{ reference_minute }} minutes after birth</strong>. Historical observations do not establish the baby's current condition.</p></div>
+{% for row in timeline %}
+<div class="score-card card" style="border-left:4px solid {% if row.action_label == 'Urgent evaluation' %}#dc2626{% elif row.action_label == 'Professional review' %}#d97706{% else %}#0f766e{% endif %}">
+<h3>{{ row.minute }}-minute observation{% if row.minute == reference_minute %} · Used for immediate inference{% else %} · Previous observation{% endif %}</h3>
+<div class="result-meta chips"><span class="result-chip chip">APGAR: <strong style="color:{% if row.total >= 7 %}#15803d{% elif row.total >= 4 %}#b45309{% else %}#b91c1c{% endif %}">{{ row.total }}/10</strong> · {{ row.category }}</span><span class="result-chip chip">Immediate index: {{ '%.1f'|format(row.immediate_index) }}/100 · {{ row.immediate_level|default('Earlier policy') }}</span><span class="result-chip chip">Support: {{ row.support }}</span></div>
+<table class="rules-table"><thead><tr><th>Appearance</th><th>Pulse</th><th>Reflex response</th><th>Muscle tone</th><th>Respiration</th></tr></thead><tbody><tr><td>{{ row.components.appearance }}/2</td><td>{{ row.components.pulse }}/2</td><td>{{ row.components.grimace }}/2</td><td>{{ row.components.activity }}/2</td><td>{{ row.components.respiration }}/2</td></tr></tbody></table>
+{% for alert in row.alerts %}<p><strong>{{ alert.reason }}</strong></p>{% endfor %}{% for notice in row.notices %}<p>{{ notice.reason }}</p>{% endfor %}
+<p><strong>Recommended action: {{ row.action_label|default('Earlier policy — see stored recommendation') }}</strong></p><p>{{ row.action|default('Run a new assessment for the current per-observation action policy.') }}</p>
+</div>{% endfor %}
+{% if not timeline|selectattr('minute','equalto',1)|list %}<p>1-minute observation: Not recorded.</p>{% endif %}
+{% if repeat_message %}<div class="score-card card"><h3>Repeat-scoring status</h3><p>{{ repeat_message }}</p></div>{% endif %}
+<div class="score-card card"><h3>Inference inputs</h3><p>The five components from the {{ reference_minute }}-minute observation supply the APGAR total for immediate inference, alongside delivery complication. Earlier scores provide history and are not averaged. An improved score does not document resolution of earlier concerns. Support requires clinician interpretation. Risk indices and recommended actions are outputs.</p></div>
+{% endif %}

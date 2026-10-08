@@ -110,6 +110,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .rev-item .rl{font-size:11px;color:var(--muted);margin-bottom:4px}
 .rev-item .rv{font-size:15px;font-weight:600;color:#1f2937}
 @media(max-width:500px){.review-grid,.irow{grid-template-columns:1fr;flex-direction:column}}
+.repeat-observation{margin:20px 0;padding:16px;border:1px solid var(--border);border-radius:12px;min-width:0}.repeat-observation legend{padding:0 8px;font-weight:600;font-size:14px}.repeat-table{width:100%;border-collapse:collapse}.repeat-table th,.repeat-table td{padding:10px;text-align:left;border-bottom:1px solid var(--border)}.repeat-table th{width:34%;font-size:13px}.repeat-table .fi{width:100%}#repeatSuggestion{font-size:13px;line-height:1.6;margin:12px 0}#addRepeatObservation[hidden]{display:none}@media(max-width:560px){.repeat-observation{padding:8px}.repeat-table th,.repeat-table td{padding:8px 4px}.repeat-table th{width:28%;font-size:11px}}
 </style>
 </head>
 <body>
@@ -149,75 +150,48 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
     <div class="sec-card active" id="step1">
       <div class="card-hd">
         <div class="card-icon" style="background:rgba(14,165,233,.1)">👶</div>
-        <div><h2>APGAR Score Components</h2><p>Rate each of the 5 indicators at birth: 0 (low), 1 (moderate), or 2 (good)</p></div>
+        <div><h2>APGAR observation record</h2><p>Record fresh clinical observations at 1 and 5 minutes after birth. Never delay care to complete this form.</p></div>
       </div>
       <div class="card-bd">
-        <div class="apgar-help">Select one option for each indicator.</div>
-        <div class="apgar-grid">
-
-          <div>
-            <div class="apgar-lbl">Appearance (Skin Color)</div>
-            <div class="apgar-opts" id="grp_appearance">
-              <label class="apgar-opt" onclick="pickApgar(this,'appearance',0)"><input type="radio" name="appearance" value="0" required {% if form_data.get('appearance') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>Blue or pale all over</strong><span>Oxygen is not reaching the skin - poor circulation throughout body</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'appearance',1)"><input type="radio" name="appearance" value="1" {% if form_data.get('appearance') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Pink body, blue hands/feet</strong><span>Body color looks good, but fingertips and toes are still slightly blue</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'appearance',2)"><input type="radio" name="appearance" value="2" {% if form_data.get('appearance') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Fully pink throughout</strong><span>Excellent - healthy color from head to toe, great circulation</span></div></label>
-            </div>
-            <div class="ferr{% if errors.get('appearance') %} show{% endif %}" id="err_appearance">{{ errors.get('appearance', 'Select an APGAR score of 0, 1, or 2.') }}</div>
-          </div>
-
-          <div>
-            <div class="apgar-lbl">Pulse (Heart Rate)</div>
-            <div class="apgar-opts" id="grp_pulse">
-              <label class="apgar-opt" onclick="pickApgar(this,'pulse',0)"><input type="radio" name="pulse" value="0" required {% if form_data.get('pulse') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>No heartbeat detected</strong><span>Critical - heart is not beating. Immediate intervention required</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'pulse',1)"><input type="radio" name="pulse" value="1" {% if form_data.get('pulse') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Slow - below 100 beats/min</strong><span>Heart is beating but too slowly - needs close monitoring</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'pulse',2)"><input type="radio" name="pulse" value="2" {% if form_data.get('pulse') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong - 100+ beats/min</strong><span>Excellent - heart is beating at a healthy, vigorous rate</span></div></label>
-            </div>
-            <div class="ferr{% if errors.get('pulse') %} show{% endif %}" id="err_pulse">{{ errors.get('pulse', 'Select an APGAR score of 0, 1, or 2.') }}</div>
-          </div>
-
-          <div>
-            <div class="apgar-lbl">Grimace (Reflex Response)</div>
-            <div class="apgar-opts" id="grp_grimace">
-              <label class="apgar-opt" onclick="pickApgar(this,'grimace',0)"><input type="radio" name="grimace" value="0" required {% if form_data.get('grimace') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>No response to stimulation</strong><span>Baby shows no reaction when stimulated - reflexes are absent</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'grimace',1)"><input type="radio" name="grimace" value="1" {% if form_data.get('grimace') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Grimace only</strong><span>Some reflex activity present but the response is weak</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'grimace',2)"><input type="radio" name="grimace" value="2" {% if form_data.get('grimace') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Cry, cough, or sneeze</strong><span>Excellent - baby responds strongly and vigorously to stimulation</span></div></label>
-            </div>
-            <div class="ferr{% if errors.get('grimace') %} show{% endif %}" id="err_grimace">{{ errors.get('grimace', 'Select an APGAR score of 0, 1, or 2.') }}</div>
-          </div>
-
-          <div>
-            <div class="apgar-lbl">Activity (Muscle Tone)</div>
-            <div class="apgar-opts" id="grp_activity">
-              <label class="apgar-opt" onclick="pickApgar(this,'activity',0)"><input type="radio" name="activity" value="0" required {% if form_data.get('activity') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>Limp - no movement at all</strong><span>Very low or absent muscle tone. Baby is not moving</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'activity',1)"><input type="radio" name="activity" value="1" {% if form_data.get('activity') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Some flexion of arms/legs</strong><span>Baby shows some movement but muscle strength is limited</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'activity',2)"><input type="radio" name="activity" value="2" {% if form_data.get('activity') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Active, vigorous movement</strong><span>Excellent - baby is actively moving with good, healthy muscle tone</span></div></label>
-            </div>
-            <div class="ferr{% if errors.get('activity') %} show{% endif %}" id="err_activity">{{ errors.get('activity', 'Select an APGAR score of 0, 1, or 2.') }}</div>
-          </div>
-
-          <div>
-            <div class="apgar-lbl">Respiration (Breathing Effort)</div>
-            <div class="apgar-opts" id="grp_respiration">
-              <label class="apgar-opt" onclick="pickApgar(this,'respiration',0)"><input type="radio" name="respiration" value="0" required {% if form_data.get('respiration') == '0' %}checked{% endif %}><div class="opt-score s0">0</div><div class="opt-txt"><strong>Not breathing at all</strong><span>Critical - immediate help is required right away</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'respiration',1)"><input type="radio" name="respiration" value="1" {% if form_data.get('respiration') == '1' %}checked{% endif %}><div class="opt-score s1">1</div><div class="opt-txt"><strong>Weak or irregular breathing</strong><span>Present but too weak or inconsistent - needs support</span></div></label>
-              <label class="apgar-opt" onclick="pickApgar(this,'respiration',2)"><input type="radio" name="respiration" value="2" {% if form_data.get('respiration') == '2' %}checked{% endif %}><div class="opt-score s2">2</div><div class="opt-txt"><strong>Strong, vigorous cry</strong><span>Excellent - breathing is healthy and lungs are working well</span></div></label>
-            </div>
-            <div class="ferr{% if errors.get('respiration') %} show{% endif %}" id="err_respiration">{{ errors.get('respiration', 'Select an APGAR score of 0, 1, or 2.') }}</div>
-          </div>
-
-        </div>
-
+        <input type="hidden" name="apgar_mode" value="timed">
+        <p class="apgar-help">Record fresh observations. The 5-minute column is required; leave an unrecorded 1-minute observation blank. Component concerns are displayed separately from the total.</p>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:540px"><thead><tr><th style="text-align:left;padding:12px">Component</th><th style="padding:12px">1 minute after birth</th><th style="padding:12px">5 minutes after birth</th></tr></thead><tbody>
+        {% for field,label,descriptions in [('appearance','Appearance',['Blue/pale all over','Pink body, blue extremities','Fully pink']),('pulse','Pulse',['Absent','Below 100 bpm','100+ bpm']),('grimace','Reflex response',['No response','Grimace only','Cry/cough/sneeze']),('activity','Muscle tone',['Limp','Some flexion','Active movement']),('respiration','Respiration',['Absent','Weak/irregular','Strong cry'])] %}
+        <tr><th style="text-align:left;padding:12px;border-bottom:1px solid #e2d9cb">{{ label }}</th>
+        {% for minute in [1,5] %}{% set name = field if minute == 5 else 'apgar_1_' ~ field %}
+          <td style="padding:10px;border-bottom:1px solid #e2d9cb"><select aria-label="{{ label }} at {{ minute }} minutes" class="fi" id="{{ name }}" name="{{ name }}" onchange="{% if minute == 5 %}selectApgar(this,'{{ field }}'){% else %}updateTimedObservations(){% endif %}"><option value="">{% if minute == 5 %}Select score{% else %}Not recorded{% endif %}</option>{% for score in [0,1,2] %}<option value="{{ score }}" {% if form_data.get(name) == score|string %}selected{% endif %}>{{ score }} — {{ descriptions[score] }}</option>{% endfor %}</select>
+          <p class="ferr{% if errors.get(name) %} show{% endif %}" id="err_{{ name }}">{{ errors.get(name, 'Select an APGAR score of 0, 1, or 2.') }}</p></td>
+        {% endfor %}</tr>{% endfor %}
+        <tr><th style="text-align:left;padding:12px">Support/resuscitation</th>{% for minute in [1,5] %}<td style="padding:10px"><select aria-label="Support at {{ minute }} minutes" class="fi" name="apgar_{{ minute }}_support">{% for v,l in [('unknown','Unknown / not recorded'),('none','None'),('provided','Provided')] %}<option value="{{ v }}" {% if form_data.get('apgar_' ~ minute ~ '_support') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></td>{% endfor %}</tr>
+        </tbody></table></div><div class="score-display"><div class="score-ring" id="timedRing1"><div class="sn" id="timedNum1">?</div><div class="sd">/10</div></div><div class="score-info"><h3>1-minute observation</h3><p id="timedSummary1" role="status"></p></div></div>
         <div class="score-display">
           <div class="score-ring" id="scoreRing">
             <div class="sn" id="scoreNum">?</div>
             <div class="sd">/10</div>
           </div>
           <div class="score-info">
-            <h3 id="scoreCat">Rate all 5 indicators above</h3>
-            <p id="scoreDesc">Your total APGAR score appears here as you make your selections</p>
+            <span style="font-weight:600">5-minute observation</span><h3 id="scoreCat">Rate all 5 indicators above</h3>
+            <p id="scoreDesc" role="alert" aria-live="assertive">5-minute APGAR total appears after all five components are recorded</p>
+        <p id="fiveComponentAlerts" role="alert" style="padding:12px;background:#fff7ed;color:#92400e;border-radius:8px" hidden></p>
           </div>
         </div>
 
+        <p id="repeatSuggestion" role="status"></p>
+        <section id="repeatObservations" hidden aria-label="Additional APGAR observations">
+        {% for minute in [10,15,20] %}
+        <fieldset id="repeatRow{{ minute }}" class="repeat-observation" hidden><legend>{{ minute }} minutes after birth</legend>
+        <div style="overflow-x:auto"><table class="repeat-table"><thead><tr><th>Component</th><th>{{ minute }}-minute score</th></tr></thead><tbody>
+        {% for field,label,descriptions in [('appearance','Appearance',['Blue/pale all over','Pink body, blue extremities','Fully pink']),('pulse','Pulse',['Absent','Below 100 bpm','100+ bpm']),('grimace','Reflex response',['No response','Grimace only','Cry/cough/sneeze']),('activity','Muscle tone',['Limp','Some flexion','Active movement']),('respiration','Respiration',['Absent','Weak/irregular','Strong cry'])] %}
+          <tr><th><label for="apgar_{{ minute }}_{{ field }}">{{ label }}</label></th><td>
+          <select class="fi timed-component" id="apgar_{{ minute }}_{{ field }}" name="apgar_{{ minute }}_{{ field }}" onchange="updateTimedObservations()"><option value="">Select score</option>{% for score in [0,1,2] %}<option value="{{ score }}" {% if form_data.get('apgar_' ~ minute ~ '_' ~ field) == score|string %}selected{% endif %}>{{ score }} — {{ descriptions[score] }}</option>{% endfor %}</select>
+          {% if errors.get('apgar_' ~ minute ~ '_' ~ field) %}<p class="ferr show">{{ errors.get('apgar_' ~ minute ~ '_' ~ field) }}</p>{% endif %}
+          </td></tr>
+        {% endfor %}
+        <tr><th><label for="apgar_{{ minute }}_support">Support/resuscitation</label></th><td><select class="fi" id="apgar_{{ minute }}_support" name="apgar_{{ minute }}_support">{% for v,l in [('unknown','Unknown / not recorded'),('none','None'),('provided','Provided')] %}<option value="{{ v }}" {% if form_data.get('apgar_' ~ minute ~ '_support') == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></td></tr>
+        </tbody></table></div>
+        <div class="score-display"><div class="score-ring" id="timedRing{{ minute }}"><div class="sn" id="timedNum{{ minute }}">?</div><div class="sd">/10</div></div><div class="score-info"><h3>{{ minute }}-minute observation</h3><p id="timedSummary{{ minute }}" role="status" aria-live="polite"></p></div></div>
+        </fieldset>{% endfor %}</section>
+        <button type="button" id="addRepeatObservation" class="btn btn-ghost" onclick="appendRepeatObservation()" hidden aria-controls="repeatObservations">+ 5 minutes</button>
         <div class="nav-bar">
           <span></span>
           <button type="button" class="btn btn-next" onclick="goNext(1)">Birth Information &#x2192;</button>
@@ -392,7 +366,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
       </div>
       <div class="card-bd">
         <div class="review-grid" id="rev-grid"></div>
-        <div class="hint" style="margin-top:22px">This assessment will be saved to your account under the baby's name.</div>
+        <div class="hint" style="margin-top:22px">This assessment will be saved in shared history under the baby's name.</div>
         <div class="nav-bar">
           <button type="button" class="btn btn-ghost" onclick="goPrev(4)">&#x2190; Edit</button>
           <button type="submit" class="btn btn-sub">Calculate Risk Assessment</button>
@@ -432,7 +406,7 @@ function validate(s){
   let ok=true;
   if(s===1){
     APGAR_FIELDS.forEach(f=>{
-      const selected=document.querySelector('input[name='+f+']:checked');
+      const selected=document.querySelector('select[name='+f+']');
       if(!selected||!['0','1','2'].includes(selected.value)){showE('err_'+f);ok=false;}
       else hideE('err_'+f);
     });
@@ -460,6 +434,10 @@ function validate(s){
   return ok;
 }
 
+function selectApgar(select,field){
+  if(select.value==='')delete apgarVals[field];else apgarVals[field]=Number(select.value);
+  updateScore();
+}
 function pickApgar(lbl,field,score){
   lbl.closest('.apgar-opts').querySelectorAll('.apgar-opt').forEach(l=>l.className='apgar-opt');
   lbl.classList.add('sel'+score);
@@ -475,11 +453,20 @@ function updateScore(){
   const cat=document.getElementById('scoreCat'),desc=document.getElementById('scoreDesc');
   num.textContent=done.length===5?total:'?';
   let col,label,note;
-  if(done.length<5){col='#0ea5e9';label=done.length+'/5 indicators rated';note='Complete all 5 indicators for your total APGAR score';}
-  else if(total>=7){col='#22c55e';label='Normal - '+total+'/10';note='Baby is showing good signs of health at birth.';}
-  else if(total>=4){col='#f59e0b';label='Moderate concern - '+total+'/10';note='Baby may need some medical support or closer monitoring.';}
-  else{col='#ef4444';label='Low - '+total+'/10';note='Baby requires immediate medical attention and intervention.';}
+  if(done.length<5){col='#64748b';label=done.length+'/5 components recorded';note='Complete the 5-minute observation to calculate its total.';}
+  else if(total>=7){col='#16a34a';label='Reassuring total — '+total+'/10';note='No repeat-scoring prompt from this total alone. Review component alerts separately.';}
+  else if(total>=4){col='#d97706';label='Moderately abnormal total — '+total+'/10';note='5-minute total below 7: repeat scoring is indicated.';}
+  else{col='#dc2626';label='Low total — '+total+'/10';note='Immediate clinical evaluation; do not delay care for documentation.';}
   ring.style.borderColor=col;num.style.color=col;cat.textContent=label;desc.textContent=note;
+  const belowSeven=done.length===5 && total<7;
+  document.getElementById('repeatSuggestion').textContent=belowSeven?'5-minute APGAR below 7: use + 5 minutes to record a fresh repeat observation. Do not delay care.':'';
+  const concerns=[];
+  if(apgarVals.pulse<2 || apgarVals.respiration<2)concerns.push('Heartbeat or breathing concern: immediate clinical assessment.');
+  if(apgarVals.appearance===0 || apgarVals.grimace===0 || apgarVals.activity===0)concerns.push('Colour, absent reflex response or limp tone: direct clinical assessment needed.');
+  if(apgarVals.grimace===1 || apgarVals.activity===1)concerns.push('Limited reflex response or reduced tone: review in clinical context.');
+  const alerts=document.getElementById('fiveComponentAlerts');
+  if(alerts){alerts.textContent=concerns.join(' ');alerts.hidden=!concerns.length;}
+  if(typeof updateTimedObservations==='function')updateTimedObservations();
 }
 
 function setUnit(u){
@@ -563,11 +550,11 @@ document.getElementById('birth_weight').addEventListener('input',updateWeightCon
 setUnit(document.getElementById('weight_unit').value||'lb');
 
 APGAR_FIELDS.forEach(field=>{
-  const selected=document.querySelector(`input[name="${field}"]:checked`);
-  if(selected){
+  const selected=document.querySelector(`select[name="${field}"]`);
+  if(selected && selected.value!==''){
     const score=Number(selected.value);
     apgarVals[field]=score;
-    selected.closest('.apgar-opt').classList.add('sel'+score);
+
   }
 });
 updateScore();
@@ -615,7 +602,7 @@ function buildReview(){
   const relativeLabels={father:'Father',mother:'Mother',both_parents:'Both parents',other_family_member:'Other family member',unknown:'Unknown'};
   const items=[
     {l:'Baby\'s Name',v:babyName||'-'},
-    {l:'APGAR Score',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'-'},
+    {l:'5-minute APGAR',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'-'},
     {l:'Gestational Age',v:wk?wk+' weeks':'-'},
     {l:'Birth Weight',v:wt?wt+' '+un:'-'},
     {l:'Mother\'s Age',v:ag?ag+' years':'-'},
@@ -625,8 +612,96 @@ function buildReview(){
     {l:'Known Family Disease',v:familyStatus==='yes'?'Yes - '+familyDisease:familyStatus==='no'?'No':'Unknown'},
     {l:'Who Has It',v:familyStatus==='yes'?(relativeLabels[affectedRelative]||'-'):'Not applicable'},
   ];
+  const recordedMinutes=[], apgarReview=[];
+  for(const minute of [1,5,10,15,20]){
+    const scores=minute===5?fs.map(f=>apgarVals[f]===undefined?'':String(apgarVals[f])):fs.map(f=>document.getElementById('apgar_'+minute+'_'+f).value);
+    if(scores.every(v=>v!=='')){
+      apgarReview.push({l:minute+'-minute APGAR',v:scores.reduce((sum,v)=>sum+Number(v),0)+'/10'});
+      recordedMinutes.push(minute);
+    }
+  }
+  items.splice(1,1,...apgarReview);
+  items.push({l:'Immediate inference reference',v:recordedMinutes.length?Math.max(...recordedMinutes)+'-minute observation':'Not recorded'});
   document.getElementById('rev-grid').innerHTML=items.map(i=>`<div class="rev-item"><div class="rl">${i.l}</div><div class="rv">${i.v}</div></div>`).join('');
 }
 </script>
+
+<script>
+function updateRepeatControls(){
+  const fields=['appearance','pulse','grimace','activity','respiration'];
+  const added=updateRepeatControls.added || (updateRepeatControls.added=new Set());
+  for(const minute of [10,15,20]){
+    if(fields.some(f=>document.getElementById('apgar_'+minute+'_'+f).value!=='')){
+      for(const previous of [10,15,20].filter(t=>t<=minute))added.add(previous);
+    }
+  }
+  for(const minute of [10,15,20])document.getElementById('repeatRow'+minute).hidden=!added.has(minute);
+  document.getElementById('repeatObservations').hidden=added.size===0;
+  const next=[10,15,20].find(t=>!added.has(t));
+  const fiveComplete=fields.every(f=>apgarVals[f]!==undefined);
+  const fiveBelow=fiveComplete&&fields.reduce((t,f)=>t+apgarVals[f],0)<7;
+  let eligible=false;
+  if(next&&fiveBelow){
+    const values=next===10?fields.map(f=>String(apgarVals[f])):fields.map(f=>document.getElementById('apgar_'+(next-5)+'_'+f).value);
+    eligible=values.every(v=>v!=='')&&values.reduce((t,v)=>t+Number(v),0)<7;
+  }
+  const button=document.getElementById('addRepeatObservation');
+  button.hidden=!eligible;
+  button.dataset.minute=eligible?String(next):'';
+  button.textContent=eligible?'+ 5 minutes — add '+next+'-minute observation':'+ 5 minutes';
+  const suggestion=document.getElementById('repeatSuggestion');
+  if(suggestion){
+    let message='';
+    if(fiveBelow){
+      if(eligible)message='Repeat scoring is indicated: use + 5 minutes to record the '+next+'-minute observation. Do not delay care.';
+      else if(added.size){
+        const latest=Math.max(...added);
+        const scores=fields.map(f=>document.getElementById('apgar_'+latest+'_'+f).value);
+        if(scores.some(v=>v===''))message='Record all five components for the '+latest+'-minute observation before adding another time point.';
+        else if(scores.reduce((t,v)=>t+Number(v),0)>=7)message='The latest repeat total is at least 7; no further repeat-scoring prompt. Review component concerns and clinical context.';
+        else message='The 20-minute observation is recorded; further evaluation is determined by the clinical team.';
+      }
+    }
+    suggestion.textContent=message;
+  }
+
+}
+function appendRepeatObservation(){
+  updateRepeatControls();
+  const button=document.getElementById('addRepeatObservation');
+  if(button.hidden)return;
+  const minute=Number(button.dataset.minute);
+  updateRepeatControls.added.add(minute);
+  updateTimedObservations();
+  document.getElementById('apgar_'+minute+'_appearance').focus();
+}
+function updateTimedObservations(){
+  for(const minute of [1,10,15,20]){
+    const fields=['appearance','pulse','grimace','activity','respiration'];
+    const vals=Object.fromEntries(fields.map(f=>[f,document.getElementById('apgar_'+minute+'_'+f).value]));
+    const complete=fields.every(f=>vals[f]!=='');
+    let concerns=[];
+    if(vals.pulse==='0'||vals.pulse==='1'||vals.respiration==='0'||vals.respiration==='1')concerns.push('Urgent heartbeat/breathing alert: immediate clinical assessment.');
+    if(vals.appearance==='0'||vals.grimace==='0'||vals.activity==='0')concerns.push('Absent reflex response, limp tone, or blue/pale colour requires immediate clinical assessment.');
+    if(vals.grimace==='1'||vals.activity==='1')concerns.push('Limited reflex response or reduced tone requires professional reassessment.');
+    document.getElementById('timedSummary'+minute).textContent=(complete?'Recorded total: '+fields.reduce((t,f)=>t+Number(vals[f]),0)+'/10. ':'Not recorded or incomplete. ')+concerns.join(' ');
+    const total=fields.reduce((t,f)=>t+Number(vals[f]),0);
+    const colour=!complete?'#64748b':total>=7?'#16a34a':total>=4?'#d97706':'#dc2626';
+    document.getElementById('timedRing'+minute).style.borderColor=colour;
+    const totalElement=document.getElementById('timedNum'+minute);totalElement.textContent=complete?total:'?';totalElement.style.color=colour;
+
+  }
+  updateRepeatControls();
+}
+updateTimedObservations();
+document.getElementById('mainForm').addEventListener('submit',function(event){
+  for(const minute of [1,10,15,20]){
+    const fields=['appearance','pulse','grimace','activity','respiration'];
+    const count=fields.filter(f=>document.getElementById('apgar_'+minute+'_'+f).value!=='').length;
+    if(count>0&&count<5){event.preventDefault();alert('Complete all five components for '+minute+' minutes, or clear that observation.');return;}
+  }
+});
+</script>
+
 </body>
 </html>

@@ -1,3 +1,5 @@
+from apgar_observations import validate_observation_records
+from apgar_safety import check_apgar_safety
 import numpy as np
 from scipy.integrate import simpson
 import matplotlib
@@ -33,7 +35,7 @@ def convert_weight_to_grams(value, unit):
 
 APGAR_DESCRIPTIONS = {
     'appearance': {
-        0: ("Blue/Pale all over", "Concerning — the baby's skin is pale or blue, indicating oxygen may not be circulating well."),
+        0: ("Blue/Pale all over", "Direct clinical assessment needed — skin colour alone cannot establish oxygenation."),
         1: ("Pink body, blue hands/feet", "Mild concern — body color looks good, but fingertips and toes are still slightly blue."),
         2: ("Fully pink", "Excellent — healthy skin color throughout the entire body."),
     },
@@ -60,10 +62,11 @@ APGAR_DESCRIPTIONS = {
 }
 
 def calculate_apgar(appearance, pulse, grimace, activity, respiration):
-    apgar = min(max(appearance + pulse + grimace + activity + respiration, 0), 10)
+    safety = check_apgar_safety(appearance, pulse, grimace, activity, respiration)
+    apgar = appearance + pulse + grimace + activity + respiration
     if apgar >= 7:
         category = "Normal (7–10)"
-        summary = "Baby is in good health."
+        summary = "The total is in the normal range; it does not establish overall health."
         severity = "good"
     elif apgar >= 4:
         category = "Moderate concern (4–6)"
@@ -116,11 +119,13 @@ def fuzzify_birth_weight(w):
     }
 
 def fuzzify_maternal_age(age):
-    vy = trapezoidal_mf(age, 0, 0, 15, 18)
-    y  = trapezoidal_mf(age, 15, 18, 22, 25)
-    n  = trapezoidal_mf(age, 22, 25, 30, 35)
-    a  = trapezoidal_mf(age, 30, 35, 40, 45)
-    va = trapezoidal_mf(age, 40, 45, 60, 60)
+    """Heuristic age context: adolescent membership ends at 20; older-age
+    membership rises after 35. Exact ramps are not clinically calibrated."""
+    vy = trapezoidal_mf(age, -0.1, 0, 15, 18)
+    y  = trapezoidal_mf(age, 15, 18, 18, 20)
+    n  = trapezoidal_mf(age, 18, 20, 35, 40)
+    a  = trapezoidal_mf(age, 35, 40, 45, 50)
+    va = trapezoidal_mf(age, 40, 45, 60, 60.1)
     return {
         'very_young': vy, 'young': y, 'normal': n, 'advanced': a, 'very_advanced': va,
         'any_young': max(vy, y), 'any_advanced': max(a, va),
@@ -500,7 +505,7 @@ def family_history_message(family_history, family_history_risk_index):
     status = family_history.get('status', 'unknown')
     relative = family_history.get('affected_relative', '')
     if status == 'no':
-        return 'No known family disease was reported, so family history has a low contribution.'
+        return 'No known family disease was reported, so no additional family-history follow-up is suggested by this input alone.'
     if status == 'unknown':
         return 'Family disease history is unknown, so this part of the assessment is less certain.'
     if relative == 'both_parents':
@@ -618,23 +623,20 @@ def fuzzify_risk_index(risk_index):
     }
 
 
-def apply_hierarchical_risk_rules(immediate_index, birth_index, family_index, return_rules=False):
-    """Combine module indices using fuzzy rules rather than numeric weights."""
+def apply_hierarchical_risk_rules(immediate_index, birth_index, family_index=None, return_rules=False):
+    """Acute hierarchy only. family_index is ignored for legacy callers."""
     immediate = fuzzify_risk_index(immediate_index)
     birth = fuzzify_risk_index(birth_index)
-    family = fuzzify_risk_index(family_index)
 
     rules = [
-        _rule('HR-01', 'Overall Hierarchy', 'All modules low', 'Low immediate, birth-related, and family-history indices support low overall risk.', 'low', min(immediate['low'], birth['low'], family['low'])),
-        _rule('HR-02', 'Overall Hierarchy', 'Moderate immediate risk', 'Moderate immediate risk keeps the overall result at least moderate.', 'moderate', immediate['moderate']),
-        _rule('HR-03', 'Overall Hierarchy', 'Moderate birth-related risk', 'Moderate birth-related risk keeps the overall result at least moderate.', 'moderate', birth['moderate']),
-        _rule('HR-04', 'Overall Hierarchy', 'Moderate family-history risk', 'Moderate family-history risk keeps the overall result at least moderate.', 'moderate', family['moderate']),
-        _rule('HR-05', 'Overall Hierarchy', 'High immediate risk persists', 'High immediate risk cannot be cancelled by lower birth-related or family-history indices.', 'high', immediate['high']),
-        _rule('HR-06', 'Overall Hierarchy', 'High birth-related risk persists', 'High birth-related risk remains elevated even when family-history risk is low.', 'high', birth['high']),
-        _rule('HR-07', 'Overall Hierarchy', 'High family-history risk persists', 'High family-history risk activates high overall risk.', 'high', family['high']),
-        _rule('HR-08', 'Overall Hierarchy', 'Moderate immediate and birth risks', 'Moderate immediate and birth-related risks together activate high overall risk.', 'high', min(immediate['moderate'], birth['moderate'])),
-        _rule('HR-09', 'Overall Hierarchy', 'High immediate with moderate birth risk', 'High immediate risk with moderate birth-related risk activates high overall risk.', 'high', min(immediate['high'], birth['moderate'])),
-        _rule('HR-10', 'Overall Hierarchy', 'Moderate immediate with high birth risk', 'Moderate immediate risk with high birth-related risk activates high overall risk.', 'high', min(immediate['moderate'], birth['high'])),
+        _rule('HR-01', 'Acute Triage', 'Both acute modules low', 'Low immediate and birth-related indices support routine care.', 'low', min(immediate['low'], birth['low'])),
+        _rule('HR-02', 'Acute Triage', 'Moderate immediate risk', 'Moderate immediate risk keeps the overall result at least moderate.', 'moderate', immediate['moderate']),
+        _rule('HR-03', 'Acute Triage', 'Moderate birth-related risk', 'Moderate birth-related risk keeps the overall result at least moderate.', 'moderate', birth['moderate']),
+        _rule('HR-05', 'Acute Triage', 'High immediate risk persists', 'High immediate risk cannot be cancelled by lower birth-related or family-history indices.', 'high', immediate['high']),
+        _rule('HR-06', 'Acute Triage', 'High birth-related risk persists', 'High birth-related risk remains elevated even when family-history risk is low.', 'high', birth['high']),
+        _rule('HR-08', 'Acute Triage', 'Moderate immediate and birth risks', 'Moderate immediate and birth-related risks together activate high overall risk.', 'high', min(immediate['moderate'], birth['moderate'])),
+        _rule('HR-09', 'Acute Triage', 'High immediate with moderate birth risk', 'High immediate risk with moderate birth-related risk activates high overall risk.', 'high', min(immediate['high'], birth['moderate'])),
+        _rule('HR-10', 'Acute Triage', 'Moderate immediate with high birth risk', 'Moderate immediate risk with high birth-related risk activates high overall risk.', 'high', min(immediate['moderate'], birth['high'])),
     ]
     levels = _aggregate_rule_levels(rules)
     return (levels, rules) if return_rules else levels
@@ -697,11 +699,11 @@ def calculate_assessment_confidence(final_risk_levels, important_inputs_complete
         else 'Family-history information was either specified or no condition was reported.'
     )
     if strongest >= 0.75 and separation >= 0.25:
-        reasons.append('The strongest final fuzzy level was clearly separated from the alternatives.')
+        reasons.append('The strongest module fuzzy level was clearly separated from the alternatives.')
     elif strongest >= 0.40 and separation >= 0.10:
-        reasons.append('The final fuzzy levels showed a usable but not strong separation.')
+        reasons.append('The module fuzzy levels showed a usable but not strong separation.')
     else:
-        reasons.append('The final fuzzy levels overlapped substantially, so the interpretation is less certain.')
+        reasons.append('The module fuzzy levels overlapped substantially, so the interpretation is less certain.')
 
     return {
         'level': level,
@@ -716,7 +718,7 @@ def _dominant_membership(memberships, keys):
     return key, float(memberships[key])
 
 
-def identify_assessment_factors(fuzzy_inputs, family_history_risk_index, family_history):
+def identify_assessment_factors(fuzzy_inputs, family_history_risk_index, family_history, include_family=True):
     """Summarize input signals; strengths rank factors but are not contribution shares."""
     factors = []
 
@@ -788,6 +790,8 @@ def identify_assessment_factors(fuzzy_inputs, family_history_risk_index, family_
     else:
         factors.append({'name': 'No known family disease', 'description': 'No known family disease was reported.', 'role': 'lowering', 'strength': 1.0})
 
+    if not include_family:
+        factors = [f for f in factors if f['name'] not in {'Known family disease', 'Family disease history is unknown', 'No known family disease'}]
     impact_factors = sorted(
         (factor for factor in factors if factor['role'] == 'impact'),
         key=lambda factor: factor['strength'], reverse=True,
@@ -932,11 +936,11 @@ def generate_visualizations(
 
     x = np.linspace(12, 55, 500)
     save_fig(x, [
-        ('Very Young (<15)',    [trapezoidal_mf(v,0,0,15,18) for v in x],   '#7f1d1d'),
-        ('Young (15–22)',       [trapezoidal_mf(v,15,18,22,25) for v in x], '#f59e0b'),
-        ('Optimal (22–35)',     [trapezoidal_mf(v,22,25,30,35) for v in x], '#22c55e'),
-        ('Advanced (35–45)',    [trapezoidal_mf(v,30,35,40,45) for v in x], '#f59e0b'),
-        ('Very Advanced (>45)', [trapezoidal_mf(v,40,45,60,60) for v in x], '#ef4444'),
+        ('Very Young (<15)',    [fuzzify_maternal_age(v)['very_young'] for v in x],   '#7f1d1d'),
+        ('Adolescent (fades by 20)', [fuzzify_maternal_age(v)['young'] for v in x], '#f59e0b'),
+        ('Typical age context', [fuzzify_maternal_age(v)['normal'] for v in x], '#22c55e'),
+        ('Older age (rises after 35)', [fuzzify_maternal_age(v)['advanced'] for v in x], '#f59e0b'),
+        ('Very advanced age context', [fuzzify_maternal_age(v)['very_advanced'] for v in x], '#ef4444'),
     ], "Mother's Age Interpretation", "Age (years)", f"{chart_prefix}age_fuzzy.png", actual_values['age'])
     plots['age'] = f'static/{chart_prefix}age_fuzzy.png'
 
@@ -1017,26 +1021,31 @@ def generate_visualizations(
     if module_risk_levels:
         module_plots = (
             ('immediate', 'Immediate Condition Risk - Fuzzy Output', 'immediate'),
-            ('birth', 'Birth-Related Risk - Fuzzy Output', 'birth'),
-            ('family', 'Family-History Risk - Fuzzy Output', 'family'),
+            ('birth', 'Birth-Related Monitoring - Fuzzy Output', 'birth'),
+            ('family', 'Family-History Follow-up - Fuzzy Output', 'family'),
         )
         for plot_key, title, levels_key in module_plots:
             filename = f'{chart_prefix}{plot_key}_risk.png'
             save_risk_output(module_risk_levels[levels_key], title, filename)
             plots[plot_key] = f'static/{filename}'
 
-    centroid = save_risk_output(
-        final_risk_levels,
-        'Final Risk Index - Hierarchical Fuzzy Defuzzification',
-        f'{chart_prefix}final_risk.png',
-    )
-    plots['final'] = f'static/{chart_prefix}final_risk.png'
-
+    if final_risk_levels is not None:
+        centroid = save_risk_output(final_risk_levels, 'Legacy combined output', f'{chart_prefix}final_risk.png')
+        plots['final'] = f'static/{chart_prefix}final_risk.png'
+    else:
+        centroid = None
+        plots['final'] = None
     return centroid, plots
+
 
 def assess_risk(appearance, pulse, grimace, activity, respiration,
                 birth_week, birth_weight_g, maternal_age, delivery_type, delivery_comp,
-                family_history, child_gender, chart_prefix=''):
+                family_history, child_gender, chart_prefix='', apgar_observations=None):
+    if apgar_observations:
+        validate_observation_records(apgar_observations)
+        latest = max(apgar_observations, key=lambda o: o['minute'])
+        appearance, pulse, grimace, activity, respiration = (latest['components'][k] for k in ('appearance', 'pulse', 'grimace', 'activity', 'respiration'))
+    safety = check_apgar_safety(appearance, pulse, grimace, activity, respiration)
     normalized_gender = normalize_gender(child_gender)
     apgar_score, apgar_breakdown, apgar_category, apgar_severity, component_detail = \
         calculate_apgar(appearance, pulse, grimace, activity, respiration)
@@ -1054,6 +1063,9 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     birth_risk_levels, birth_rules = apply_birth_related_rules(
         fuzzy_inputs, return_rules=True
     )
+    raw_immediate_risk_index = defuzzify_risk(immediate_risk_levels)
+    if safety['active']:
+        immediate_risk_levels = {'low': 0.0, 'moderate': 0.0, 'high': 1.0}
     immediate_condition_risk_index = defuzzify_risk(immediate_risk_levels)
     birth_related_risk_index = defuzzify_risk(birth_risk_levels)
 
@@ -1079,33 +1091,19 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         })
     family_summary = family_history_message(family_history, family_history_risk_index)
 
-    final_risk_levels, hierarchical_rules = apply_hierarchical_risk_rules(
-        immediate_condition_risk_index,
-        birth_related_risk_index,
-        family_history_risk_index,
-        return_rules=True,
-    )
-
-    overall_risk_index, plot_paths = generate_visualizations(
-        fuzzy_inputs, final_risk_levels,
+    # Legacy database fields mirror immediate condition; no combined inference.
+    final_risk_levels = dict(immediate_risk_levels)
+    raw_final_risk_index = raw_immediate_risk_index
+    overall_risk_index = immediate_condition_risk_index
+    _, plot_paths = generate_visualizations(
+        fuzzy_inputs, None,
         {'apgar': apgar_score, 'week': birth_week, 'weight': birth_weight_g, 'age': maternal_age},
         family_history_items, chart_prefix=chart_prefix,
-        module_risk_levels={
-            'immediate': immediate_risk_levels,
-            'birth': birth_risk_levels,
-            'family': family_risk_levels,
-        },
+        module_risk_levels={'immediate': immediate_risk_levels, 'birth': birth_risk_levels, 'family': family_risk_levels},
     )
-
-    if overall_risk_index < 30:
-        risk_level, risk_color = "Low", "low"
-        recommendation = "Continue normal newborn care and routine checkups, and contact a healthcare professional if anything seems unusual."
-    elif overall_risk_index < 70:
-        risk_level, risk_color = "Moderate", "moderate"
-        recommendation = "Arrange or continue follow-up with a healthcare professional and pay closer attention to the highlighted factors."
-    else:
-        risk_level, risk_color = "High", "high"
-        recommendation = "Seek prompt professional medical evaluation, and do not wait for this application to confirm a diagnosis."
+    risk_level = risk_level_for_index(immediate_condition_risk_index)
+    risk_color = risk_level.lower()
+    recommendation = safety['action'] if safety['active'] else ''
 
     delivery_type_label = {
         'vaginal': 'Vaginal Delivery',
@@ -1122,28 +1120,170 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
             family_history.get('disease') and family_history.get('affected_relative')
         )
     confidence = calculate_assessment_confidence(
-        final_risk_levels, important_inputs_complete, family_history
+        immediate_risk_levels, important_inputs_complete, {'status': 'no'}
     )
     main_factors, lower_impact_factors = identify_assessment_factors(
-        fuzzy_inputs, family_history_risk_index, family_history
+        fuzzy_inputs, family_history_risk_index, family_history, include_family=False
     )
+    family_names = {'Known family disease', 'Family disease history is unknown', 'No known family disease'}
+    main_factors = [f for f in main_factors if f['name'] not in family_names]
+    lower_impact_factors = [f for f in lower_impact_factors if f['name'] not in family_names]
     triggered_rules = select_important_rules(
-        immediate_rules + birth_rules + family_rules + hierarchical_rules
+        immediate_rules + birth_rules + family_rules
     )
     user_guidance = build_user_guidance(
         risk_level, main_factors, lower_impact_factors
     )
-    conclusion = (f"{risk_level} health risk. {apgar_breakdown}. "
+    if safety['active']:
+        main_factors = [{'name': alert['reason'], 'description': safety['action'],
+                        'role': 'impact', 'strength': 1.0} for alert in safety['alerts']] + main_factors
+        lower_impact_factors = [f for f in lower_impact_factors if f['name'] != 'Stable APGAR pattern']
+        triggered_rules = [{'id': a['id'], 'module': 'Safety override', 'name': a['reason'],
+                            'description': safety['action'], 'outcome': 'high',
+                            'activation': 1.0} for a in safety['alerts']] + triggered_rules
+        user_guidance['short_summary'] = 'Urgent component alert: immediate professional assessment required.'
+        user_guidance['main_notices'] = [a['reason'] for a in safety['alerts']]
+        user_guidance['next_steps'] = [safety['action']]
+    immediate_level = risk_level_for_index(immediate_condition_risk_index)
+    birth_level = risk_level_for_index(birth_related_risk_index)
+    if safety['active'] or any(n['urgency'] == 'urgent' for n in safety['notices']) or immediate_level == 'High':
+        triage = 'Urgent evaluation'
+    elif safety['notices'] or immediate_level == 'Moderate':
+        triage = 'Closer monitoring and professional review'
+    else:
+        triage = 'Routine care and observation'
+    if not safety['active']:
+        recommendation = {
+            'Urgent evaluation': 'Seek urgent professional evaluation of the baby’s current condition.',
+            'Closer monitoring and professional review': 'Arrange neonatal professional review and a monitoring plan for the immediate or birth-related concerns.',
+            'Routine care and observation': 'Continue routine newborn care and observation; seek professional help for new symptoms.',
+        }[triage]
+    if safety['notices'] and not safety['active']:
+        recommendation = ' '.join(n['action'] for n in sorted(safety['notices'], key=lambda n: n['urgency'] != 'urgent'))
+    family_follow_up = {
+        'yes': 'Share the reported condition and affected relatives with the baby’s clinician. Discuss whether genetic counselling or disease-specific screening is appropriate; family history alone does not diagnose the baby.',
+        'unknown': 'Clarify family history with relatives and the baby’s clinician. Unknown history does not establish low inherited risk.',
+        'no': 'No additional referral is suggested by the reported family history alone. Continue routine newborn screening and share any newly discovered history with the clinician.',
+    }[family_history['status']]
+    family_follow_up_level = ('Unknown' if family_history['status'] == 'unknown'
+                              else risk_level_for_index(family_history_risk_index))
+    for notice in safety['notices']:
+        main_factors.insert(0, {'name': notice['reason'], 'description': notice['action'], 'role': 'impact', 'strength': 1.0})
+        user_guidance['main_notices'].insert(0, notice['reason'])
+    user_guidance['short_summary'] = triage
+    user_guidance['next_steps'] = [recommendation]
+    conclusion = (f"Immediate-condition action: {triage}. {apgar_breakdown}. "
                   f"Birth at {birth_week}w, weight {birth_weight_g:.0f}g, "
                   f"mother age {maternal_age}, child gender: {normalized_gender}, "
                   f"delivery: {delivery_type_label}, delivery complication: {delivery_complication}. "
                   f"Immediate Condition Risk Index: {immediate_condition_risk_index:.1f} / 100. "
-                  f"Birth-Related Risk Index: {birth_related_risk_index:.1f} / 100. "
-                  f"Family-History Risk Index: {family_history_risk_index:.1f} / 100. "
-                  f"Overall Risk Index: {overall_risk_index:.1f} / 100. "
+                  f"Birth-Related Monitoring Index: {birth_related_risk_index:.1f} / 100. "
+                  f"Family-History Follow-up Index: {family_history_risk_index:.1f} / 100. "
+                  f"Family follow-up: {family_follow_up}. "
                   f"Confidence: {confidence['level']}. {recommendation}")
 
+    timeline = []
+    for observation in sorted(apgar_observations or [], key=lambda o: o['minute']):
+        components = observation['components']
+        total, breakdown, category, severity, _ = calculate_apgar(**components)
+        checks = check_apgar_safety(**components)
+        levels = apply_immediate_condition_rules({'apgar': fuzzify_apgar(total), 'delivery_comp': fuzzify_delivery_comp(delivery_comp)})
+        if checks['active']:
+            levels = {'low': 0.0, 'moderate': 0.0, 'high': 1.0}
+        index = defuzzify_risk(levels)
+        urgent = checks['active'] or any(n['urgency'] == 'urgent' for n in checks['notices']) or risk_level_for_index(index) == 'High'
+        needs_review = bool(checks['notices']) or risk_level_for_index(index) == 'Moderate'
+        action_label = 'Urgent evaluation' if urgent else 'Professional review' if needs_review else 'Routine observation'
+        action_text = (checks['action'] if checks['active'] else ' '.join(n['action'] for n in checks['notices']) if checks['notices'] else
+                       'Seek urgent neonatal clinical evaluation.' if urgent else
+                       'Review this observation and reported delivery complication with the neonatal clinician.' if needs_review else
+                       'Continue routine observation appropriate to the clinical context.')
+        timeline.append({**observation, 'immediate_level': risk_level_for_index(index), 'action_label': action_label, 'action': action_text, 'total': total, 'category': category, 'severity': severity,
+                         'notices': checks['notices'], 'alerts': checks['alerts'],
+                         'immediate_index': defuzzify_risk(levels)})
+    five = next((o for o in timeline if o['minute'] == 5), None)
+    repeat_suggested = bool(five and five['total'] < 7)
+    repeat_message = ''
+    repeat_status = 'not_indicated'
+    if repeat_suggested:
+        latest_time = timeline[-1]['minute']
+        next_time = next((t for t in (10, 15, 20) if t > latest_time), None)
+        if latest_time > 5 and timeline[-1]['total'] >= 7:
+            repeat_status = 'recorded_improvement'
+            repeat_message = 'Repeat scoring was indicated by the 5-minute total below 7. The latest recorded total is now at least 7; ongoing assessment remains the clinician’s decision.'
+        elif next_time:
+            repeat_status = 'suggested'
+            repeat_message = f'The 5-minute APGAR total was below 7. Record a fresh observation at {next_time} minutes after birth, and further scoring up to 20 minutes as clinically indicated. Do not delay clinical care.'
+        else:
+            repeat_status = 'window_complete'
+            repeat_message = 'The 5-minute APGAR total was below 7. The 20-minute observation is recorded; further evaluation is determined by the clinical team.'
+    first = next((o for o in timeline if o['minute'] == 1), None)
+    trend = ('Not available: 1-minute observation not recorded' if not first else
+             'Total improved' if timeline[-1]['total'] > first['total'] else
+             'Total decreased' if timeline[-1]['total'] < first['total'] else 'Total unchanged') if timeline else 'Untimed observation'
+    if timeline:
+        conclusion = (f"Recorded APGAR timeline: {' → '.join(str(o['minute']) + ' min ' + str(o['total']) + '/10' for o in timeline)}. "
+                      f"{trend}. Latest recorded observation: {timeline[-1]['minute']} minutes after birth. "
+                      'This historical observation does not establish the baby’s condition now. ' + conclusion)
+    recorded_text = '; '.join(f"{o['minute']} minutes: APGAR {o['total']}/10" for o in timeline)
+    immediate_observation_summary = (
+        (f"Recorded observations: {recorded_text}. {trend}. The latest complete observation at {timeline[-1]['minute']} minutes supplies the immediate inference input. " if timeline else f"Untimed observation: APGAR {apgar_score}/10. ")
+        + f"Final immediate-condition index: {immediate_condition_risk_index:.1f}/100 ({immediate_level}). Recommended action: {triage}. {recommendation}"
+        + (' Earlier component concerns remain documented; score improvement does not establish their clinical resolution.' if any(o['alerts'] or o['notices'] for o in timeline[:-1]) else '')
+        + ' This describes recorded findings, not continuous monitoring or a diagnosis.'
+    )
+    immediate_facts = [
+        f"{o['minute']} minutes: APGAR {o['total']}/10; support/resuscitation: {o.get('support', 'unknown')}." for o in timeline
+    ] or [f"Untimed observation: APGAR {apgar_score}/10."]
+    if timeline:
+        immediate_facts.append(f"{trend}. Inference uses the latest complete {timeline[-1]['minute']}-minute observation, without averaging scores.")
+    immediate_facts.append(f"Final immediate-condition index: {immediate_condition_risk_index:.1f}/100 ({immediate_level}). Action priority: {triage}.")
+    immediate_concerns = [a['reason'] for a in safety['alerts']] + [n['reason'] for n in safety['notices']]
+    if delivery_comp:
+        immediate_concerns.append('A delivery complication was reported; review it with the recorded APGAR findings.')
+    if any(o['alerts'] or o['notices'] for o in timeline[:-1]):
+        immediate_concerns.append('Earlier component concerns remain documented; improvement in the total does not confirm their clinical resolution.')
+    if not immediate_concerns:
+        immediate_concerns.append('No component safety alert is triggered by the latest recorded scores; continue direct clinical observation.')
+    immediate_actions = [recommendation]
+    if repeat_message:
+        immediate_actions.append(repeat_message)
+    module_actions = [
+        {'module': 'Immediate condition', 'level': immediate_level, 'priority': triage, 'action': recommendation},
+        {'module': 'Birth-related monitoring', 'level': birth_level,
+         'priority': 'Monitoring plan' if birth_level != 'Low' else 'Routine birth follow-up',
+         'action': 'Review gestation, weight and maternal context with the neonatal clinician and document a monitoring plan.' if birth_level != 'Low' else 'Continue routine birth-related follow-up appropriate to the clinical context.'},
+        {'module': 'Family-history follow-up', 'level': family_follow_up_level, 'priority': 'Family-history plan', 'action': family_follow_up},
+    ]
     return {
+        'immediate_observation_summary': immediate_observation_summary,
+        'immediate_facts': immediate_facts,
+        'immediate_care_concerns': immediate_concerns,
+        'immediate_recommended_actions': immediate_actions,
+        'module_actions': module_actions,
+        'apgar_timeline': timeline,
+        'apgar_trend': trend,
+        'apgar_reference_minute': timeline[-1]['minute'] if timeline else None,
+        'repeat_observations_suggested': repeat_status == 'suggested',
+        'repeat_scoring_indicated_at_five': repeat_suggested,
+        'repeat_observation_status': repeat_status,
+        'repeat_observation_message': repeat_message,
+        'assessment_semantics': 'separate-v3',
+        'assessment_policy_version': 'fuzzy-v5-module-actions',
+        'inference_input_summary': {
+            'reference_minute': timeline[-1]['minute'] if timeline else None,
+            'components': {'appearance': appearance, 'pulse': pulse, 'grimace': grimace, 'activity': activity, 'respiration': respiration},
+            'apgar_total': apgar_score,
+            'delivery_complication': delivery_comp,
+            'birth_week': birth_week, 'birth_weight_g': birth_weight_g, 'maternal_age': maternal_age,
+        },
+        'assessment_notices': safety['notices'],
+        'overall_triage': triage,
+        'family_history_follow_up': family_follow_up,
+        'family_history_follow_up_level': family_follow_up_level,
+        'safety_override': safety,
+        'unoverridden_immediate_risk_index': raw_immediate_risk_index,
+        'unoverridden_final_risk_index': raw_final_risk_index,
         'immediate_condition_risk_index': immediate_condition_risk_index,
         'birth_related_risk_index': birth_related_risk_index,
         'family_history_risk_index': family_history_risk_index,

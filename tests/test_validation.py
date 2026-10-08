@@ -192,10 +192,10 @@ class RouteValidationTests(unittest.TestCase):
             db.session.add(record)
             db.session.commit()
 
-        response = self.client.get('/profile')
+        response = self.client.get('/profile', follow_redirects=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Route Test User', response.data)
+        self.assertIn(b'Shared History', response.data)
         self.assertIn(b'Emma', response.data)
 
     def test_history_can_be_filtered_by_baby_name(self):
@@ -212,7 +212,7 @@ class RouteValidationTests(unittest.TestCase):
 
         filtered = self.client.get('/assessments?baby=Emma')
         self.assertEqual(filtered.status_code, 200)
-        self.assertIn(b'47.8 / 100', filtered.data)
+        self.assertIn(b'Legacy combined result', filtered.data)
 
         other_baby = self.client.get('/assessments?baby=Nobody')
         self.assertEqual(other_baby.status_code, 200)
@@ -243,11 +243,11 @@ class RouteValidationTests(unittest.TestCase):
         self.assertNotIn(b'Signed in as', response.data)
 
     def test_pages_share_the_top_navigation(self):
-        for path in ('/', '/assessments', '/profile'):
+        for path in ('/', '/assessments'):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 200, path)
             self.assertIn(b'site-nav', response.data)
-            self.assertIn(b'profile-chip', response.data)
+            self.assertNotIn(b'profile-chip', response.data)
         self.assertNotIn(b'Signed in as', self.client.get('/assessments').data)
 
     def test_logged_out_user_is_redirected_from_protected_history(self):
@@ -255,8 +255,8 @@ class RouteValidationTests(unittest.TestCase):
 
         response = self.client.get('/assessments')
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn('/login', response.headers['Location'])
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Shared History', response.data)
 
     @patch('app.assess_risk')
     def test_invalid_submission_never_reaches_fuzzy_assessment(self, assess_risk):
@@ -294,11 +294,33 @@ class RouteValidationTests(unittest.TestCase):
         self.assertNotIn(b"Baby&#39;s Name", response.data)
         self.assertNotIn(b"Baby's Name", response.data)
         self.assertIn(b'Immediate Condition Risk', response.data)
-        self.assertIn(b'Birth-Related Risk', response.data)
-        self.assertIn(b'Family-History Risk', response.data)
-        self.assertIn(b'Overall Assessment Result', response.data)
+        self.assertIn(b'Birth-Related Monitoring', response.data)
+        self.assertIn(b'Family-History Follow-up', response.data)
+        self.assertIn(b'Recommended actions by module', response.data)
         self.assertIn(b'Important Triggered Fuzzy Rules', response.data)
         self.assertIn(b'Family disease history is unknown', response.data)
+
+    @patch('fuzzy_logic.generate_visualizations')
+    def test_timed_submission_persists_and_replays_all_observations(self, plots):
+        from fuzzy_logic import defuzzify_risk
+        plots.side_effect = lambda inputs, levels, *args, **kwargs: (defuzzify_risk(levels or kwargs['module_risk_levels']['immediate']), {
+            key: '' for key in ('apgar','week','weight','age','genetic','immediate','birth','family','final')})
+        form = valid_form(apgar_mode='timed', grimace='1')
+        for field in application.APGAR_FIELDS:
+            form[f'apgar_1_{field}'] = '1'
+            form[f'apgar_10_{field}'] = '2'
+        response = self.client.post('/', data=form)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Immediate observation summary and final result', response.data)
+        self.assertNotIn(b'not green', response.data)
+        with application.app.app_context():
+            stored = Assessment.query.order_by(Assessment.id.desc()).first()
+            self.assertEqual(stored.grimace, 2)
+            self.assertEqual([o['minute'] for o in stored.result_snapshot['apgar_timeline']], [1,5,10])
+            _, replay = application._replay_assessment(stored)
+            self.assertEqual(replay['apgar_reference_minute'], 10)
+            self.assertEqual(replay['apgar_timeline'], stored.result_snapshot['apgar_timeline'])
+
 
 
 if __name__ == '__main__':
