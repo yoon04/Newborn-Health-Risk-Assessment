@@ -164,7 +164,7 @@ def build_pdf_report(report):
         story.append(_section_heading('Urgent APGAR component alert', heading_style))
         story.extend(_bullet_paragraphs([a['reason'] for a in safety['alerts']], bullet_style))
         story.append(_paragraph(safety['action'], body_style))
-        story.append(_paragraph('Component safety rules override immediate and overall outputs to High; indices are not probabilities.', body_style))
+        story.append(_paragraph('Component safety rules set the immediate-condition module to High; indices are not probabilities. A low ML estimate cannot cancel this alert.', body_style))
 
     for notice in report.get('assessment_notices', []):
         story.append(_section_heading(notice['reason'], heading_style))
@@ -310,6 +310,30 @@ def build_pdf_report(report):
             family_table,
         ]))
 
+    twins = report.get('twin_context')
+    if twins:
+        story.append(_section_heading('Twin assessment identity', heading_style))
+        story.append(_paragraph(f"Twin 1: {twins['twin_1_name']}; Twin 2: {twins['twin_2_name']}. This report assesses Twin {twins['assessed_twin']} only. The other twin requires a separate assessment.", body_style))
+
+    ml = report.get('ml_research')
+    story.append(_section_heading('ML research estimate: recorded NICU admission', heading_style))
+    if ml and ml.get('status') == 'available':
+        story.append(_paragraph(f"Research-only estimate: {ml['probability_percent']:.1f}% probability of recorded NICU admission. Model: {ml['model_version']}.", body_style))
+        inputs_ml = ml.get('inputs', {})
+        story.append(_paragraph(f"Model inputs: {inputs_ml.get('gestational_age_weeks')} weeks, {inputs_ml.get('birth_weight_g')} g, maternal age {inputs_ml.get('maternal_age')} years. Singleton birth.", body_style))
+        encoding_ml = ml.get('input_encoding')
+        if encoding_ml:
+            story.append(_paragraph(f"Recorded gestation: {encoding_ml['recorded_gestational_weeks']} weeks. ML uses {encoding_ml['completed_gestational_weeks']} completed weeks in CDC format. Clinical and fuzzy inputs remain unchanged.", body_style))
+        evaluation_ml = ml.get('evaluation', {})
+        story.append(_paragraph(f"Historical 2023 evaluation: n={evaluation_ml.get('n')}; AUROC={evaluation_ml.get('auroc', 0):.3f}; AUPRC={evaluation_ml.get('auprc', 0):.3f}; Brier={evaluation_ml.get('brier', 0):.4f}.", body_style))
+    else:
+        story.append(_paragraph('Estimate unavailable. ' + (ml.get('reason', '') if ml else 'No ML estimate was recorded for this assessment.'), body_style))
+    story.append(_paragraph('Research only. A low estimate cannot establish safety. APGAR alerts and module actions remain independent; this estimate does not determine admission, treatment, or discharge.', body_style))
+    if ml:
+        story.append(_paragraph(ml.get('scope', ''), small_style))
+        for limitation in ml.get('limitations', []):
+            story.append(_paragraph(limitation, small_style))
+
     plot_paths = report.get('plot_paths', {})
     birth_charts = [
         ("Baby's APGAR Score", plot_paths.get('apgar')), ('Gestational Age', plot_paths.get('week')),
@@ -347,6 +371,29 @@ def build_pdf_report(report):
         story.append(_paragraph('Graph interpretation: curves represent fuzzy rule activation; the vertical line marks the centre-of-area risk index. The index is not a probability; component alerts independently guide action.', small_style))
         story.append(_section_heading('Immediate observation summary and final result', heading_style))
         story.append(_paragraph(report['immediate_observation_summary'], body_style))
+    if report.get('birth_monitoring'):
+        birth = report['birth_monitoring']
+        story.append(_section_heading('Recorded birth findings and final result', heading_style))
+        if birth.get('finding_facts'):
+            for fact in birth['finding_facts']:
+                story.append(_paragraph(fact, body_style))
+            story.append(_section_heading('Reason for this result', heading_style))
+            for fact in birth['reason_facts']:
+                story.append(_paragraph(fact, body_style))
+        elif birth.get('summary'):
+            story.append(_paragraph(birth['summary'], body_style))
+            story.append(_section_heading('Reason for this result', heading_style))
+            story.append(_paragraph(birth['result_reason'], body_style))
+        else:
+            for finding in birth['inputs']:
+                story.append(_paragraph(f"{finding['name']}: {finding['value']} - {finding['category']}.", body_style))
+            story.append(_paragraph(birth['final_result'], body_style))
+        for title, key in [('Monitoring concerns', 'concerns'), ('Recommended monitoring actions', 'actions')]:
+            story.append(_section_heading(title, heading_style))
+            for line in birth[key]:
+                story.append(_paragraph(line, body_style))
+        story.append(_paragraph(birth['explanation'], small_style))
+        story.append(_paragraph(birth['limitations'], small_style))
     if report.get('module_actions'):
         story.append(_section_heading('Recommended actions by module', heading_style))
         for action in report['module_actions']:
@@ -374,7 +421,7 @@ def build_pdf_report(report):
                 '<b>Hierarchical fuzzy result from immediate, birth-related, and family-history modules</b><br/>'
                 f'Risk Index: <b>{overall_risk_index:.1f} / 100</b> &nbsp; '
                 f'Risk Level: <b>{_escaped(report.get("risk_level", final_level))}</b> &nbsp; '
-                f'Confidence: <b>{_escaped(report.get("confidence_level", "Low"))}</b><br/>'
+                f'Rule clarity (heuristic): <b>{_escaped(report.get("confidence_level", "Low"))}</b><br/>'
                 f'{_escaped(report.get("recommendation", ""))}', body_style,
             ),
         ]], colWidths=[40 * mm, 134 * mm])
@@ -389,7 +436,8 @@ def build_pdf_report(report):
     confidence_reasons = report.get('confidence_reasons', [])
     if confidence_reasons:
         story.append(KeepTogether([
-            _section_heading('Confidence Basis', heading_style),
+            _section_heading('Rule clarity basis (heuristic)', heading_style),
+            _paragraph('Rule clarity is not calibrated uncertainty or clinical predictive accuracy.', small_style),
             *_bullet_paragraphs(confidence_reasons, bullet_style),
         ]))
 

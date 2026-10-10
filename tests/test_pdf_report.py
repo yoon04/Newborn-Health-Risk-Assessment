@@ -131,12 +131,12 @@ class PdfReportTests(unittest.TestCase):
         self.assertIn('Family-History Risk', text)
         self.assertIn('Birth Chart Summary', text)
         self.assertIn('Overall Assessment Result', text)
-        self.assertIn('Confidence Basis', text)
+        self.assertIn('Rule clarity basis (heuristic)', text)
         self.assertIn('Assessment Factors', text)
         self.assertIn('Important Triggered Fuzzy Rules', text)
         self.assertIn('Overall Risk Index Chart', text)
         self.assertIn('65.4 / 100', text)
-        self.assertIn('Confidence:', text)
+        self.assertIn('Rule clarity (heuristic):', text)
         self.assertIn('BR-06', text)
 
     def test_download_endpoint_returns_pdf_attachment(self):

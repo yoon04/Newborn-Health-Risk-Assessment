@@ -1,0 +1,9 @@
+{% set twins = results.get('twin_context') %}
+{% if twins %}<section class="ml-research" aria-label="Twin assessment identity">
+<h2>This assessment: Twin {{ twins.assessed_twin }} — {{ twins.twin_1_name if twins.assessed_twin == 1 else twins.twin_2_name }}</h2>
+<p>Twin 1: {{ twins.twin_1_name }} · Twin 2: {{ twins.twin_2_name }}</p>
+<p>These observations, results, and actions belong only to Twin {{ twins.assessed_twin }}. The other twin needs a separate assessment; their condition is not inferred from this record.</p>
+{% if results.get('birth_week') is not none and results.get('maternal_age') is not none %}
+<p><a href="{{ url_for('index', birth_plurality='twin', baby_name=twins.twin_1_name, co_twin_name=twins.twin_2_name, assessed_twin=2 if twins.assessed_twin == 1 else 1, birth_week=results.birth_week, maternal_age=results.maternal_age) }}">Start separate assessment for Twin {{ 2 if twins.assessed_twin == 1 else 1 }}</a></p>
+<p>Names, maternal age, and gestational age are prefilled. Enter APGAR observations, weight, and all other findings separately.</p>{% endif %}
+</section>{% endif %}

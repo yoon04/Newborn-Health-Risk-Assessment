@@ -36,6 +36,6 @@ Scores below are ordered **Appearance / Pulse / Grimace (reflex response) / Acti
 Run automated checks from the project directory:
 
 ```powershell
-.venv\Scripts\python.exe -m unittest discover -s tests -q
+.venv\Scripts\python.exe tests\run_tests.py
 node tests/repeat_observation_ui.cjs
 ```

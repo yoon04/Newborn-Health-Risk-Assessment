@@ -18,6 +18,7 @@ from fuzzy_logic import assess_risk, convert_weight_to_grams
 from models import Assessment, User
 from pdf_report import build_pdf_report
 from persistence import save_assessment
+from ml_research import estimate_nicu_research
 # Load the project's .env by absolute path so starting Flask from another
 # working directory does not silently skip the SMTP/database configuration.
 # Existing environment variables remain authoritative (override=False).
@@ -127,6 +128,11 @@ def validate_submission(form):
     errors = {}
     values = {}
 
+    plurality = (form.get('birth_plurality') or 'unknown').strip().lower()
+    if plurality not in {'singleton', 'twin', 'multiple', 'unknown'}:
+        errors['birth_plurality'] = 'Select singleton, twins, other multiple birth, or unknown.'
+    values['birth_plurality'] = plurality
+
     raw_baby_name = (form.get('baby_name') or '').strip()
     if not raw_baby_name:
         errors['baby_name'] = 'Enter the baby\'s name.'
@@ -134,6 +140,18 @@ def validate_submission(form):
         errors['baby_name'] = f'Baby\'s name must be {MAX_BABY_NAME_LENGTH} or fewer printable characters.'
     else:
         values['baby_name'] = raw_baby_name
+
+    if plurality == 'twin':
+        other_name = (form.get('co_twin_name') or '').strip()
+        twin_number = (form.get('assessed_twin') or '1').strip()
+        if not other_name or len(other_name) > MAX_BABY_NAME_LENGTH or any(not c.isprintable() for c in other_name):
+            errors['co_twin_name'] = 'Enter the second twin\'s name (up to 80 printable characters).'
+        if twin_number not in {'1', '2'}:
+            errors['assessed_twin'] = 'Select Twin 1 or Twin 2 for this assessment.'
+        if not errors.get('baby_name') and not errors.get('co_twin_name') and not errors.get('assessed_twin'):
+            values['twin_context'] = {'twin_1_name': raw_baby_name, 'twin_2_name': other_name,
+                                      'assessed_twin': int(twin_number)}
+            values['baby_name'] = raw_baby_name if twin_number == '1' else other_name
 
     for field in APGAR_FIELDS:
         raw_value = (form.get(field) or '').strip()
@@ -311,6 +329,9 @@ def build_report_payload(values, results):
     ]
 
     return {
+        'ml_research': results.get('ml_research'),
+        'twin_context': results.get('twin_context'),
+        'birth_monitoring': results.get('birth_monitoring', {}),
         'immediate_observation_summary': results.get('immediate_observation_summary', ''),
         'module_actions': results.get('module_actions', []),
         'inference_input_summary': results.get('inference_input_summary', {}),
@@ -328,6 +349,7 @@ def build_report_payload(values, results):
         'generated_at': datetime.now().astimezone().strftime('%Y-%m-%d %H:%M %Z'),
         'baby_name': values.get('baby_name', ''),
         'inputs': {
+            'birth_plurality': values.get('birth_plurality', 'unknown'),
             'birth_week': values['birth_week'],
             'birth_weight': results['weight_display'],
             'maternal_age': values['maternal_age'],
@@ -420,6 +442,9 @@ def index():
             f"({values['birth_weight_g']:.0f}g)"
         )
         results['baby_name'] = values.get('baby_name', '')
+        results['twin_context'] = values.get('twin_context')
+        results['birth_plurality'] = values.get('birth_plurality', 'unknown')
+        results['ml_research'] = estimate_nicu_research(values)
         results['assessment_id'] = None
         if results.get('overall_risk_index') is not None:
             try:
@@ -441,7 +466,9 @@ def index():
         results['pdf_report_token'] = _report_serializer().dumps(report_payload)
         return render_template('results.html', results=results)
 
-    return render_assessment_form()
+    prefill_fields = ('baby_name', 'co_twin_name', 'assessed_twin', 'birth_plurality', 'maternal_age', 'birth_week')
+    prefill = {k: request.args[k] for k in prefill_fields if k in request.args}
+    return render_assessment_form(form_data=prefill)
 
 
 @app.post('/report.pdf')
@@ -536,6 +563,7 @@ def _replay_assessment(assessment):
         },
     }
     values['apgar_observations'] = (assessment.result_snapshot or {}).get('apgar_timeline') or None
+    values['birth_plurality'] = (assessment.raw_inputs or {}).get('birth_plurality') or 'unknown'
     results = assess_risk(
         values['appearance'], values['pulse'], values['grimace'],
         values['activity'], values['respiration'], values['birth_week'],
@@ -548,6 +576,9 @@ def _replay_assessment(assessment):
         f"{values['weight_value']} {values['weight_unit']} "
         f"({values['birth_weight_g']:.0f}g)"
     )
+    # Preserve the original ML estimate; saved PDFs must not silently rerun a new model.
+    results['ml_research'] = (assessment.result_snapshot or {}).get('ml_research')
+    results['twin_context'] = (assessment.result_snapshot or {}).get('twin_context')
     return values, results
 
 
@@ -577,7 +608,7 @@ def assessment_detail(assessment_id):
 
     plots = {}
     try:
-        if (assessment.result_snapshot or {}).get('assessment_policy_version') == 'fuzzy-v5-module-actions':
+        if (assessment.result_snapshot or {}).get('assessment_policy_version') == 'fuzzy-v6-birth-monitoring':
             _values, _results = _replay_assessment(assessment)
             plots = _results.get('plot_paths') or {}
     except Exception:

@@ -43,7 +43,7 @@ class SeparateRiskTests(unittest.TestCase):
         self.assertEqual(urgent['overall_triage'], 'Urgent evaluation')
         self.assertTrue(urgent['safety_override']['active'])
         self.assertEqual(monitoring['overall_triage'], 'Routine care and observation')
-        self.assertEqual(monitoring['module_actions'][1]['priority'], 'Monitoring plan')
+        self.assertEqual(monitoring['module_actions'][1]['priority'], 'Prompt neonatal monitoring review')
 
     @patch('fuzzy_logic.generate_visualizations', side_effect=plots)
     def test_html_and_pdf_show_separate_results_without_overall_index(self, _plots):
@@ -74,7 +74,7 @@ class SeparateRiskTests(unittest.TestCase):
             record = build_assessment_record(values, result, raw, 1)
             record.id = 1
             payload = application.build_report_payload(values, result)
-        self.assertEqual(record.algorithm_version, 'fuzzy-v5-module-actions')
+        self.assertEqual(record.algorithm_version, 'fuzzy-v6-birth-monitoring')
         self.assertEqual(record.result_snapshot['overall_triage'], result['overall_triage'])
         self.assertEqual(payload['family_history_follow_up'], result['family_history_follow_up'])
         with application.app.test_request_context('/'):

@@ -45,6 +45,39 @@ class ApgarSafetyTests(unittest.TestCase):
         self.assertEqual(result['overall_risk_index'], result['unoverridden_final_risk_index'])
 
     @patch('fuzzy_logic.generate_visualizations')
+    def test_every_apgar_eight_pattern_with_and_without_complication(self, plots):
+        plots.return_value = (None, {})
+        patterns = [v for v in itertools.product(range(3), repeat=5) if sum(v) == 8]
+        self.assertEqual(len(patterns), 15)
+        for values, complication in itertools.product(patterns, (0, 1)):
+            with self.subTest(values=values, complication=complication):
+                observation = {'minute': 5, 'components': dict(zip(('appearance','pulse','grimace','activity','respiration'), values)), 'support': 'unknown'}
+                result = assess_risk(*values, 39, 3200, 29, 'vaginal', complication, {'status':'no'}, 'male', apgar_observations=[observation])
+                override = values[1] < 2 or values[4] < 2
+                self.assertEqual(result['apgar_score'], 8)
+                self.assertEqual(result['apgar_severity'], 'good')
+                self.assertFalse(result['repeat_observations_suggested'])
+                expected = 'High' if override else 'Moderate' if complication else 'Low'
+                self.assertEqual(result['immediate_condition_risk_level'], expected)
+                self.assertAlmostEqual(result['immediate_condition_risk_index'], 80.5555556 if override else 50 if complication else 19.4444444, places=5)
+                if override:
+                    self.assertIn('Reason for High: component safety override', ' '.join(result['immediate_facts']))
+                else:
+                    self.assertIn('No heartbeat/breathing safety override', ' '.join(result['immediate_facts']))
+
+    @patch('fuzzy_logic.generate_visualizations')
+    def test_earlier_urgent_component_does_not_override_latest_safe_eight(self, plots):
+        plots.return_value = (None, {})
+        fields = ('appearance','pulse','grimace','activity','respiration')
+        timeline = [{'minute':m,'components':dict(zip(fields, values)), 'support':'unknown'}
+                    for m,values in [(1,(2,0,2,2,2)), (5,(1,2,1,2,2))]]
+        result = assess_risk(2,0,2,2,2,39,3200,29,'vaginal',0,{'status':'no'},'male',apgar_observations=timeline)
+        self.assertEqual(result['apgar_score'],8)
+        self.assertEqual(result['immediate_condition_risk_level'],'Low')
+        self.assertFalse(result['safety_override']['active'])
+        self.assertIn('Earlier component concerns', ' '.join(result['immediate_care_concerns']))
+
+    @patch('fuzzy_logic.generate_visualizations')
     def test_alert_in_html_and_pdf(self, plots):
         from flask import render_template
         from pypdf import PdfReader

@@ -4,12 +4,12 @@ from extensions import db
 from models import Assessment
 
 
-ALGORITHM_VERSION = 'fuzzy-v5-module-actions'
+ALGORITHM_VERSION = 'fuzzy-v6-birth-monitoring'
 RAW_INPUT_FIELDS = (
-    'baby_name',
+    'baby_name', 'co_twin_name', 'assessed_twin',
     'appearance', 'pulse', 'grimace', 'activity', 'respiration',
     'birth_week', 'birth_weight', 'weight_unit', 'maternal_age',
-    'child_gender', 'delivery_type', 'delivery_comp',
+    'child_gender', 'delivery_type', 'delivery_comp', 'birth_plurality',
     'family_history_status', 'family_disease', 'affected_relative',
 )
 

@@ -351,3 +351,22 @@ Results and saved assessments use a wider responsive layout. Each module graph h
 Additional inputs start hidden. A complete 5-minute APGAR below 7 enables **+ 5 minutes**, which opens only the 10-minute observation. Complete that observation before adding 15 minutes, then 20 minutes if the preceding total remains below 7. A repeat total of 7 or more stops further prompts; recorded observations and component concerns remain available. This form records fresh observations and does not schedule or perform clinical reassessment automatically.
 
 UI control regression check: `node tests/repeat_observation_ui.cjs`.
+
+
+### Birth-related monitoring explanations (v6)
+
+The birth module now presents recorded findings, monitoring concerns and recommended actions separately in new results, saved assessments and PDFs. Its expandable explanation shows input memberships and active rule strengths; the centroid is a heuristic index, not a probability. Clinical birth categories are separate from fuzzy sets, and no SGA/LGA classification is inferred without a growth reference.
+
+Maternal-age Moderate rules use an explicit project scale of 0.25; age alone no longer activates High or the complication-plus-High rule. The redundant reassuring age rule was removed so a reported complication cannot simultaneously activate a reassuring birth rule. Very-low-weight membership now has a left shoulder, correcting a small reversal around 940–1000 g. Exact categories can trigger a monitoring review even when fuzzy overlap yields a lower numeric level.
+
+The policy and saved algorithm version are `fuzzy-v6-birth-monitoring`. These changes have software regression checks, but are awaiting neonatal clinical review and outcome validation. See [birth validation cases](BIRTH_VALIDATION_CASES.md) for examples and reference sources. Run the full suite with `.venv\Scripts\python.exe tests\run_tests.py`; the runner uses an isolated in-memory SQLite database before importing the app.
+
+
+Birth results now show one concise paragraph of recorded findings and the final index, followed by a reason generated from the strongest active rule in each output group. Monitoring concerns and actions follow separately. Detailed input explanations remain expandable. A High rule activation does not automatically make the final label High: the label follows the centroid of all aggregated outputs. This limited screen omits examination, vital signs, feeding and maternal/infection detail and cannot estimate an individual baby's real disease probability. Adding inputs requires a defined outcome, clinician-designed pathways and outcome-labelled validation, rather than assuming more fields establish accuracy.
+
+
+### Fact-based results, APGAR-8 verification and research training
+
+Birth findings and result reasons are displayed line by line. Immediate facts explain when a heartbeat/breathing component safety override sets High despite a reassuring APGAR total. The confidence label is displayed as **Rule clarity (heuristic)** because it reflects activation separation, not clinical accuracy or calibrated uncertainty. Numeric rules are unchanged by this presentation update.
+
+See [medical/software validation guide](MEDICAL_VALIDATION_GUIDE.md) for cases and clinician-review steps, and [Colab training guide](research/COLAB_TRAINING_GUIDE.md) with the [research notebook](research/CDC_NICU_Baseline_Colab.ipynb). The notebook targets recorded NICU admission in CDC 2024 singleton U.S. birth records; it is not deployed and has not been trained/evaluated here. CDC aggregate APGAR totals cannot validate individual component safety checks. The current dashboard remains a research prototype awaiting clinical and local outcome validation.

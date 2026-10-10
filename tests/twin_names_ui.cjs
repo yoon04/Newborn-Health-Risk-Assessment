@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const source=fs.readFileSync('templates/form.html','utf8');
+const elements={birth_plurality:{value:'singleton'},twinAssessmentChoice:{},assessed_twin:{},coTwinFields:{},co_twin_name:{value:'Olivia'},babyNameLabel:{}};
+const document={getElementById(id){return elements[id]}};
+function hideE(){}
+eval(source.slice(source.indexOf('function updateTwinFields(){'),source.indexOf('updateTwinFields();')));
+updateTwinFields();
+assert.equal(elements.coTwinFields.hidden,true);
+assert.equal(elements.co_twin_name.disabled,true);
+assert.equal(elements.co_twin_name.required,false);
+elements.birth_plurality.value='twin';updateTwinFields();
+assert.equal(elements.coTwinFields.hidden,false);
+assert.equal(elements.co_twin_name.disabled,false);
+assert.equal(elements.co_twin_name.required,true);
+assert.equal(elements.babyNameLabel.textContent,'Twin 1 name');
+elements.birth_plurality.value='singleton';updateTwinFields();
+assert.equal(elements.co_twin_name.value,'Olivia');
+assert.equal(elements.assessed_twin.disabled,true);
+console.log('Twin name visibility and required-state controls: passed');

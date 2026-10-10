@@ -1,0 +1,22 @@
+{% if results.get('birth_monitoring') %}
+{% set birth = results.birth_monitoring %}
+<div class="birth-result-summary">
+  <section><h3>Recorded birth findings and final result</h3>
+    <ul class="birth-facts-list">{% if birth.get('finding_facts') %}{% for fact in birth.finding_facts %}<li>{{ fact }}</li>{% endfor %}{% else %}{% for finding in birth.inputs %}<li>{{ finding.name }}: {{ finding.value }} — {{ finding.category }}.</li>{% endfor %}<li>{{ birth.final_result }}</li>{% endif %}</ul>
+    <h4 class="birth-reason-title">Reason for this result</h4>
+    <ul class="birth-facts-list">{% for fact in birth.get('reason_facts', [birth.get('result_reason', birth.explanation)]) %}<li>{{ fact }}</li>{% endfor %}</ul>
+  </section>
+  <div class="birth-followup-grid">
+  <section><h3>Monitoring concerns</h3><ul>{% for concern in birth.concerns %}<li>{{ concern }}</li>{% endfor %}</ul></section>
+  <section><h3>Recommended monitoring actions</h3><ul>{% for action in birth.actions %}<li>{{ action }}</li>{% endfor %}</ul></section>
+  </div>
+</div>
+<details style="margin-top:18px"><summary style="font-size:13px;cursor:pointer">How the birth monitoring index was calculated</summary>
+  <p class="observation-footnote">{{ birth.explanation }}</p>
+  <ul class="factor-list" style="margin-top:12px">{% for finding in birth.inputs %}<li>{{ finding.name }}: {{ finding.value }}. {{ finding.explanation }}<br>Memberships: {% for name, activation in finding.memberships.items() %}{{ name|replace('_', ' ') }} {{ '%.2f'|format(activation) }}{% if not loop.last %}; {% endif %}{% endfor %}.</li>{% endfor %}</ul>
+  <div style="overflow-x:auto;margin-top:12px"><table class="rules-table"><thead><tr><th>Rule</th><th>Explanation</th><th>Output</th><th>Activation</th></tr></thead><tbody>
+  {% for rule in birth.active_rules %}<tr><td>{{ rule.id }}</td><td>{{ rule.name }}<br>{{ rule.description }}</td><td>{{ rule.outcome|title }}</td><td>{{ '%.2f'|format(rule.activation) }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</details>
+<p class="observation-footnote">{{ birth.limitations }}</p>
+{% endif %}

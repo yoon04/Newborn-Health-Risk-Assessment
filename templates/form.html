@@ -207,22 +207,47 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
       </div>
       <div class="card-bd">
         <div class="fg">
-          <label class="fl">Baby's Name</label>
+          <label class="fl" for="birth_plurality">Birth plurality</label>
+          <select name="birth_plurality" id="birth_plurality" class="fsel" onchange="updateTwinFields()">
+            <option value="unknown" {% if form_data.get('birth_plurality', 'unknown') == 'unknown' %}selected{% endif %}>Unknown / not recorded</option>
+            <option value="singleton" {% if form_data.get('birth_plurality') == 'singleton' %}selected{% endif %}>Singleton — one baby</option>
+            <option value="twin" {% if form_data.get('birth_plurality') == 'twin' %}selected{% endif %}>Twins — two babies</option>
+            <option value="multiple" {% if form_data.get('birth_plurality') == 'multiple' %}selected{% endif %}>Other multiple birth — three or more babies</option>
+          </select>
+          <div class="hint">The separate ML research model covers singleton births only. Module assessments remain available for other selections.</div>
+          {% if errors.get('birth_plurality') %}<div class="ferr show">{{ errors.birth_plurality }}</div>{% endif %}
+        </div>
+        <div id="twinAssessmentChoice" {% if form_data.get('birth_plurality') != 'twin' %}hidden{% endif %} class="fg">
+          <label class="fl" for="assessed_twin">Which twin is this assessment for?</label>
+          <select class="fsel" name="assessed_twin" id="assessed_twin">
+            <option value="1" {% if form_data.get('assessed_twin', '1') == '1' %}selected{% endif %}>Twin 1</option>
+            <option value="2" {% if form_data.get('assessed_twin') == '2' %}selected{% endif %}>Twin 2</option>
+          </select>
+          <div class="hint">APGAR observations, weight, and results on this form belong only to the selected twin. Complete a separate assessment for the other twin.</div>
+          {% if errors.get('assessed_twin') %}<div class="ferr show">{{ errors.assessed_twin }}</div>{% endif %}
+        </div>
+        <div class="fg">
+          <label class="fl" id="babyNameLabel" for="baby_name">{{ 'Twin 1 name' if form_data.get('birth_plurality') == 'twin' else "Baby's Name" }}</label>
           <input type="text" name="baby_name" id="baby_name" class="fi{% if errors.get('baby_name') %} err{% endif %}" maxlength="80" value="{{ form_data.get('baby_name', '') }}" placeholder="e.g. Emma" required>
-          <div class="hint">Results and history are stored under this name so you can track each baby separately.</div>
+          <div class="hint">Results and history are stored under the selected baby's name. Each baby needs a separate assessment record.</div>
           <div class="ferr{% if errors.get('baby_name') %} show{% endif %}" id="err_baby_name">{{ errors.get('baby_name', "Enter the baby's name.") }}</div>
+        </div>
+        <div class="fg" id="coTwinFields" {% if form_data.get('birth_plurality') != 'twin' %}hidden{% endif %}>
+          <label class="fl" for="co_twin_name">Twin 2 name</label>
+          <input type="text" name="co_twin_name" id="co_twin_name" class="fi{% if errors.get('co_twin_name') %} err{% endif %}" maxlength="80" value="{{ form_data.get('co_twin_name', '') }}" placeholder="e.g. Olivia" {% if form_data.get('birth_plurality') == 'twin' %}required{% else %}disabled{% endif %}>
+          <div class="ferr{% if errors.get('co_twin_name') %} show{% endif %}" id="err_co_twin_name">{{ errors.get('co_twin_name', 'Enter the second twin’s name.') }}</div>
         </div>
         <div class="irow">
           <div class="fg">
             <label class="fl">Gestational Age (Weeks)</label>
             <input type="number" step="0.5" name="birth_week" id="birth_week" class="fi{% if errors.get('birth_week') %} err{% endif %}" min="20" max="45" value="{{ form_data.get('birth_week', '') }}" placeholder="e.g. 38.5" required>
-            <div class="hint">Normal full-term pregnancy: 37-42 weeks</div>
+            <div class="hint">Preterm: below 37 weeks. Full term: 39 to below 41 weeks; fuzzy memberships overlap.</div>
             <div class="ferr{% if errors.get('birth_week') %} show{% endif %}" id="err_week">{{ errors.get('birth_week', 'Enter a gestational age from 20 to 45 in half-week increments.') }}</div>
           </div>
           <div class="fg">
             <label class="fl">Mother's Age (Years)</label>
             <input type="number" step="1" name="maternal_age" id="maternal_age" class="fi{% if errors.get('maternal_age') %} err{% endif %}" min="12" max="60" value="{{ form_data.get('maternal_age', '') }}" placeholder="e.g. 28" required>
-            <div class="hint">Optimal childbearing age range: 22-35 years</div>
+            <div class="hint">Maternal age adds limited context; it does not diagnose newborn illness.</div>
             <div class="ferr{% if errors.get('maternal_age') %} show{% endif %}" id="err_age">{{ errors.get('maternal_age', 'Enter a whole-number age between 12 and 60.') }}</div>
           </div>
         </div>
@@ -250,7 +275,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
             </div>
           </div>
           <input type="hidden" name="weight_unit" id="weight_unit" value="{{ display_weight_unit }}">
-          <div class="hint" id="whint">Normal range: 5.5-8.8 lb. Click units to switch</div>
+          <div class="hint" id="whint">Low birth weight: below 2500 g (about 5.5 lb). Click units to switch</div>
           <div class="conv" id="wconv">Equivalent values will appear here.</div>
           <div class="ferr{% if errors.get('birth_weight') %} show{% endif %}" id="err_weight">{{ errors.get('birth_weight', 'Enter a birth weight that converts to at least 100 g and less than 6,000 g.') }}</div>
         </div>
@@ -380,12 +405,24 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 <script>
     const SERVER_ERRORS = {{ errors | tojson }};
     const APGAR_FIELDS = ['appearance','pulse','grimace','activity','respiration'];
-    const BIRTH_FIELDS = ['baby_name','birth_week','birth_weight','maternal_age','child_gender','delivery_type','delivery_comp'];
+    const BIRTH_FIELDS = ['baby_name','birth_week','birth_weight','maternal_age','birth_plurality','co_twin_name','assessed_twin','child_gender','delivery_type','delivery_comp'];
     const serverErrorFields=Object.keys(SERVER_ERRORS);
     let curStep=serverErrorFields.some(f=>APGAR_FIELDS.includes(f))?1:
       serverErrorFields.some(f=>BIRTH_FIELDS.includes(f))?2:
       serverErrorFields.some(f=>['family_history_status','family_disease','affected_relative'].includes(f))?3:1;
     let apgarVals={};
+
+function updateTwinFields(){
+  const twins=document.getElementById('birth_plurality').value==='twin';
+  document.getElementById('twinAssessmentChoice').hidden=!twins;
+  document.getElementById('assessed_twin').disabled=!twins;
+  document.getElementById('coTwinFields').hidden=!twins;
+  const other=document.getElementById('co_twin_name');
+  other.disabled=!twins;other.required=twins;
+  document.getElementById('babyNameLabel').textContent=twins?'Twin 1 name':"Baby's Name";
+  if(!twins)hideE('err_co_twin_name','co_twin_name');
+}
+updateTwinFields();
 
 function refreshProg(){
   for(let i=1;i<=4;i++){
@@ -413,6 +450,11 @@ function validate(s){
   }
   if(s===2){
     const babyNameRaw=document.getElementById('baby_name').value.trim();
+    if(document.getElementById('birth_plurality').value==='twin'){
+      const other=document.getElementById('co_twin_name').value.trim();
+      if(!other||other.length>80){showE('err_co_twin_name','co_twin_name','Enter the second twin’s name (up to 80 characters).');ok=false;}
+      else hideE('err_co_twin_name','co_twin_name');
+    }
     const weekRaw=document.getElementById('birth_week').value.trim();
     const ageRaw=document.getElementById('maternal_age').value.trim();
     const weightRaw=document.getElementById('birth_weight').value.trim();
@@ -479,7 +521,7 @@ function setUnit(u){
   }
   document.getElementById('weight_unit').value=u;
   ['g','kg','lb'].forEach(x=>document.getElementById('u_'+x).classList.toggle('active',x===u));
-  const hints={g:'Normal range: 2,500-4,000 g',kg:'Normal range: 2.5-4.0 kg',lb:'Normal range: 5.5-8.8 lb'};
+  const hints={g:'Low birth weight: below 2,500 g. Weight-for-gestation assessment requires a growth reference.',kg:'Low birth weight: below 2.5 kg. Weight-for-gestation assessment requires a growth reference.',lb:'Low birth weight: below approximately 5.5 lb. Weight-for-gestation assessment requires a growth reference.'};
   const ph={g:'e.g. 3200',kg:'e.g. 3.2',lb:'e.g. 7.05'};
   document.getElementById('whint').textContent=hints[u]+'. Click units to switch';
   document.getElementById('birth_weight').placeholder=ph[u];
@@ -585,7 +627,11 @@ document.getElementById('mainForm').addEventListener('submit',event=>{
 });
 
 function buildReview(){
-  const babyName=document.getElementById('baby_name').value.trim();
+  const firstName=document.getElementById('baby_name').value.trim();
+  const otherName=document.getElementById('co_twin_name').value.trim();
+  const plurality=document.getElementById('birth_plurality').value;
+  const twinNumber=document.getElementById('assessed_twin').value;
+  const babyName=plurality==='twin'&&twinNumber==='2'?otherName:firstName;
   const fs=['appearance','pulse','grimace','activity','respiration'];
   const t=fs.reduce((s,f)=>s+(apgarVals[f]||0),0);
   const wk=document.getElementById('birth_week').value;
@@ -612,6 +658,8 @@ function buildReview(){
     {l:'Known Family Disease',v:familyStatus==='yes'?'Yes - '+familyDisease:familyStatus==='no'?'No':'Unknown'},
     {l:'Who Has It',v:familyStatus==='yes'?(relativeLabels[affectedRelative]||'-'):'Not applicable'},
   ];
+  items.push({l:'Birth plurality',v:{singleton:'Singleton',twin:'Twins',multiple:'Other multiple birth',unknown:'Unknown'}[plurality]||'Unknown'});
+  if(plurality==='twin')items.push({l:'Assessment identity',v:'Twin '+twinNumber+' — '+babyName},{l:'Other twin (separate assessment needed)',v:twinNumber==='1'?otherName:firstName});
   const recordedMinutes=[], apgarReview=[];
   for(const minute of [1,5,10,15,20]){
     const scores=minute===5?fs.map(f=>apgarVals[f]===undefined?'':String(apgarVals[f])):fs.map(f=>document.getElementById('apgar_'+minute+'_'+f).value);

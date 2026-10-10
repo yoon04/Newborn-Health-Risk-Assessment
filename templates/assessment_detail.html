@@ -6,6 +6,7 @@
   <title>Saved Assessment</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='site-nav.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ml-research.css') }}">
   <style>
     :root{--bg:#f6f3ee;--surface:#fff;--surface2:#f3efe8;--border:#e2d9cb;--accent:#0f766e;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--text:#1f2937;--muted:#6b7280;--card:#fff;--shadow:0 18px 50px rgba(17,24,39,.08);--shadow-sm:0 8px 24px rgba(15,23,42,.08)}
     *{box-sizing:border-box;margin:0;padding:0}
@@ -47,7 +48,10 @@
     @media(max-width:560px){.birth-grid,.grid2{grid-template-columns:1fr}.layout{flex-direction:column;align-items:center}.score-main{width:100%}.gh-grid{grid-template-columns:1fr}.comps{grid-template-columns:1fr 1fr}}
 .graph-caption{margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--muted)}.immediate-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}.immediate-summary h3{font-size:14px;font-weight:600;margin-bottom:10px}.immediate-summary ul{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.immediate-summary li+li{margin-top:8px}.observation-footnote{font-size:11px;color:var(--muted);line-height:1.5;margin-top:14px}@media(max-width:960px){.immediate-summary{grid-template-columns:1fr}}@media(max-width:560px){.main{padding:0 12px}.card{padding:16px}.charts-grid{grid-template-columns:minmax(0,1fr)}}
 
-  </style>
+  .birth-summary-text{font-size:12px;line-height:1.7;color:#475569}.birth-reason-title{font-size:12px;font-weight:600;margin:14px 0 6px}
+.birth-result-summary{margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}.birth-result-summary h3{font-size:14px;font-weight:600;margin-bottom:10px}.birth-followup-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:20px}.birth-followup-grid ul{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.birth-followup-grid li+li{margin-top:8px}@media(max-width:700px){.birth-followup-grid{grid-template-columns:1fr}}
+.birth-facts-list{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.birth-facts-list li+li{margin-top:6px}
+</style>
 </head>
 <body>
 {% set active_nav = 'history' %}{% include '_nav.html' %}
@@ -55,8 +59,9 @@
 <div class="hero"><h1>{% if assessment.baby_name %}{{ assessment.baby_name }}'s {% endif %}Saved <em>Assessment</em></h1><p>Created {{ assessment.created_at.strftime('%Y-%m-%d %H:%M') if assessment.created_at else '-' }} · Algorithm {{ assessment.algorithm_version }}</p></div>
 <div class="main">
 {% set snapshot = assessment.result_snapshot or {} %}
+{% with results=snapshot %}{% include '_twin_context.html' %}{% endwith %}
 
-{% if snapshot.get('assessment_policy_version') != 'fuzzy-v5-module-actions' %}<div class="card"><p class="desc">This snapshot uses an earlier policy. Run a new assessment for the current colour notices and maternal-age curves. PDF downloads are recalculated with the current policy.</p></div>{% endif %}
+{% if snapshot.get('assessment_policy_version') != 'fuzzy-v6-birth-monitoring' %}<div class="card"><p class="desc">This snapshot uses an earlier policy. Run a new assessment for the current birth-monitoring rules and explanations. PDF downloads are recalculated with the current policy.</p></div>{% endif %}
 {% for notice in snapshot.get('assessment_notices', []) %}<div class="card" role="alert"><h2 class="{% if notice.urgency == 'review' %}moderate{% else %}critical{% endif %}">{{ notice.reason }}</h2><p>{{ notice.action }}</p></div>{% endfor %}
 {% if snapshot.get('safety_override', {}).get('active') %}<div class="card" role="alert"><h2 class="critical">Urgent APGAR component alert</h2><p>{{ snapshot.safety_override.action }}</p></div>{% endif %}
 
@@ -99,13 +104,15 @@
     <div class="risk-pair">
       <div class="layout risk-summary">
         <div class="donut" style="--p: {{ '%.1f'|format(index) }};--clr:{% if index < 30 %}#16a34a{% elif index < 70 %}#d97706{% else %}#dc2626{% endif %}"><div class="donut-center"><div class="donut-val">{{ '%.1f'|format(index) }}</div><div class="donut-lbl">of 100</div></div></div>
-        <div class="score-main"><div class="chips"><div class="chip"><strong>Risk Index:</strong> {{ '%.1f'|format(index) }} / 100</div><div class="chip"><strong>Level:</strong> {{ level }}</div><div class="chip"><strong>Confidence:</strong> {{ assessment.confidence_level }}</div></div>{% if loop.first %}<p class="desc">{{ assessment.recommendation }}</p>{% endif %}</div>
+        <div class="score-main"><div class="chips"><div class="chip"><strong>Risk Index:</strong> {{ '%.1f'|format(index) }} / 100</div><div class="chip"><strong>Level:</strong> {{ level }}</div>{% if loop.first %}<div class="chip"><strong>Rule clarity (heuristic):</strong> {{ assessment.confidence_level }}</div>{% endif %}</div>{% if loop.first %}<p class="desc">{{ assessment.recommendation }}</p>{% endif %}</div>
       </div>
       {% if plots and plots[graph_key] %}<div class="risk-chart"><img src="/{{ plots[graph_key] }}" alt="{{ graph_alt }}"><p class="graph-caption">Graph interpretation: curves show fuzzy rule activation; the vertical line marks the {{ '%.1f'|format(index) }}/100 index. This index is not a probability.</p></div>{% endif %}
     </div>
-    {% if loop.first and snapshot.immediate_observation_summary %}{% with results=snapshot %}{% include '_immediate_summary.html' %}{% endwith %}{% endif %}
+    {% if loop.first and snapshot.immediate_observation_summary %}{% with results=snapshot %}{% include '_immediate_summary.html' %}{% endwith %}{% elif graph_key == 'birth' %}{% with results=snapshot %}{% include '_birth_summary.html' %}{% endwith %}{% endif %}
   </div>
   {% endfor %}
+
+  {% with results=snapshot %}{% include '_ml_research.html' %}{% endwith %}
 
   <div class="card">
     {% if snapshot.get('module_actions') %}
@@ -118,12 +125,12 @@
     <div class="section-title">Legacy Overall Assessment Result</div>
     <div class="layout">
       <div class="donut" style="--p:{{ '%.1f'|format(assessment.overall_risk_index|float) }};--clr:{% if assessment.overall_risk_index < 30 %}#16a34a{% elif assessment.overall_risk_index < 70 %}#d97706{% else %}#dc2626{% endif %}"><div class="donut-center"><div class="donut-val">{{ '%.1f'|format(assessment.overall_risk_index|float) }}</div><div class="donut-lbl">of 100</div></div></div>
-      <div class="score-main"><div class="score-name">Hierarchical fuzzy result from immediate, birth-related, and family-history modules</div><div class="chips"><div class="chip"><strong>Risk Index:</strong> {{ '%.1f'|format(assessment.overall_risk_index|float) }} / 100</div><div class="chip"><strong>Risk Level:</strong> {{ assessment.risk_level }}</div><div class="chip"><strong>Confidence:</strong> {{ assessment.confidence_level }}</div></div><p class="desc"><strong>{{ assessment.recommendation }}</strong></p></div>
+      <div class="score-main"><div class="score-name">Hierarchical fuzzy result from immediate, birth-related, and family-history modules</div><div class="chips"><div class="chip"><strong>Risk Index:</strong> {{ '%.1f'|format(assessment.overall_risk_index|float) }} / 100</div><div class="chip"><strong>Risk Level:</strong> {{ assessment.risk_level }}</div><div class="chip"><strong>Rule clarity (heuristic):</strong> {{ assessment.confidence_level }}</div></div><p class="desc"><strong>{{ assessment.recommendation }}</strong></p></div>
     </div>
     {% endif %}
   </div>
 
-  <div class="card"><div class="section-title">Confidence Basis</div><ul class="plain">{% for reason in assessment.confidence_reasons or [] %}<li>{{ reason }}</li>{% endfor %}</ul></div>
+  <div class="card"><div class="section-title">Rule clarity basis (heuristic)</div><p class="desc">This describes rule activation separation, not predictive accuracy or clinically validated certainty.</p><ul class="plain">{% for reason in assessment.confidence_reasons or [] %}<li>{{ reason }}</li>{% endfor %}</ul></div>
 
   <div class="card">
     <div class="section-title">Assessment Factors</div>

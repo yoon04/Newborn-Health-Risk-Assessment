@@ -1,0 +1,17 @@
+{% set ml = results.get('ml_research') %}
+<section class="ml-research" aria-labelledby="ml-research-title">
+<span class="ml-badge">Research only · clinician review required</span>
+<h2 id="ml-research-title">ML research estimate: recorded NICU admission</h2>
+{% if ml and ml.status == 'available' %}
+<div class="ml-layout"><div><div class="ml-value">{{ '%.1f'|format(ml.probability_percent) }}%</div><p>Estimated probability of recorded NICU admission</p><p>This percentage is separate from the fuzzy indices.</p></div><div>
+<p>{{ ml.reason }}</p><dl class="ml-facts"><div><dt>Gestational age used by ML</dt><dd>{{ ml.inputs.gestational_age_weeks|int }} completed weeks</dd></div><div><dt>Birth weight used</dt><dd>{{ ml.inputs.birth_weight_g }} g</dd></div><div><dt>Maternal age used</dt><dd>{{ ml.inputs.maternal_age|int }} years</dd></div><div><dt>Model</dt><dd>{{ ml.model_version }}</dd></div></dl>
+{% if ml.get('input_encoding') %}<p>Recorded gestational age: {{ ml.input_encoding.recorded_gestational_weeks }} weeks. ML input: {{ ml.input_encoding.completed_gestational_weeks }} completed weeks, following the <a href="{{ ml.input_encoding.source_url }}">CDC gestation format</a>. The clinical observation and fuzzy input remain unchanged.</p>{% endif %}
+<p>Historical 2023 evaluation: {{ ml.evaluation.n }} records; AUROC {{ '%.3f'|format(ml.evaluation.auroc) }}, AUPRC {{ '%.3f'|format(ml.evaluation.auprc) }}, Brier {{ '%.4f'|format(ml.evaluation.brier) }}.</p></div></div>
+{% else %}<p><strong>Estimate unavailable</strong></p><p>{{ ml.reason if ml else 'No ML research estimate was recorded for this assessment. Run a new assessment to capture one.' }}</p>{% endif %}
+<p class="ml-note">A low estimate cannot establish that a baby is safe. APGAR component alerts and all three module actions remain independent.</p>
+<p class="ml-note">Model: {{ ml.model_version if ml else 'No recorded model version' }}.</p>
+<details><summary>Model scope, evidence, and limitations</summary><p>{{ ml.scope if ml else 'Singleton births; gestation encoded as 20–45 completed weeks, weight 227–5999 g, maternal age 13–49 years.' }}</p>
+<ul>{% for limitation in (ml.limitations if ml else []) %}<li>{{ limitation }}</li>{% endfor %}</ul>
+<p>Inputs do not include APGAR components, delivery complications, or family history. No individual uncertainty interval or clinical risk category is assigned.</p>
+<p><a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm">CDC birth-data source</a> · Model trained on 2024 U.S. records and evaluated unchanged on 2023 records.</p></details>
+</section>

@@ -1,5 +1,6 @@
 from apgar_observations import validate_observation_records
 from apgar_safety import check_apgar_safety
+from birth_monitoring import explain_birth_monitoring
 import numpy as np
 from scipy.integrate import simpson
 import matplotlib
@@ -106,7 +107,9 @@ def fuzzify_birth_week(week):
 
 def fuzzify_birth_weight(w):
     ext_low  = trapezoidal_mf(w, -0.1, 100, 800, 1200)
-    very_low = trapezoidal_mf(w, 800, 1000, 1300, 1700)
+    # Very-low weight is a nested concern: preserve its left shoulder so
+    # improving an extremely low weight cannot increase the High activation.
+    very_low = trapezoidal_mf(w, -0.1, 100, 1300, 1700)
     low      = trapezoidal_mf(w, 1200, 1600, 2200, 2800)
     normal   = trapezoidal_mf(w, 2200, 2500, 3800, 4300)
     high     = trapezoidal_mf(w, 3600, 4000, 4600, 5200)
@@ -564,7 +567,8 @@ def apply_immediate_condition_rules(fi, return_rules=False):
 
 
 def apply_birth_related_rules(fi, return_rules=False):
-    """Birth module: gestation, weight, maternal age, and complication context."""
+    """Heuristic birth monitoring. Maternal-age rule strengths are scaled by
+    0.25 as a project policy, not a clinically calibrated coefficient."""
     week = fi['birth_week']
     weight = fi['birth_weight']
     age = fi['maternal_age']
@@ -575,19 +579,18 @@ def apply_birth_related_rules(fi, return_rules=False):
         _rule('BR-02', 'Birth-Related', 'Extremely low birth weight', 'Extremely low birth weight activates high birth-related risk.', 'high', weight['extremely_low']),
         _rule('BR-03', 'Birth-Related', 'Very low birth weight', 'Very low birth weight activates high birth-related risk.', 'high', weight['very_low']),
         _rule('BR-04', 'Birth-Related', 'Very high birth weight', 'Very high birth weight activates high birth-related risk.', 'high', weight['very_high']),
-        _rule('BR-05', 'Birth-Related', 'Very advanced maternal age', 'Very advanced maternal age activates high birth-related risk.', 'high', age['very_advanced']),
+        _rule('BR-05', 'Birth-Related', 'Very advanced maternal-age context', 'Maternal age adds limited context, not a standalone high newborn-risk signal (policy scale 0.25).', 'moderate', 0.25 * age['very_advanced']),
         _rule('BR-06', 'Birth-Related', 'Preterm with low birth weight', 'Preterm gestation together with low birth weight elevates birth-related risk.', 'high', min(week['preterm'], weight['any_low'])),
         _rule('BR-07', 'Birth-Related', 'Post-term with high birth weight', 'Post-term gestation together with high birth weight elevates birth-related risk.', 'high', min(week['postterm'], weight['any_high'])),
-        _rule('BR-08', 'Birth-Related', 'Complication with a birth concern', 'A reported delivery complication combines with gestational age, weight, or maternal-age concerns.', 'high', min(comp['complicated'], max(week['preterm'], weight['any_low'], weight['any_high'], age['any_advanced']))),
+        _rule('BR-08', 'Birth-Related', 'Complication with a birth concern', 'A reported delivery complication combines with gestational-age or weight concerns; maternal age alone does not activate this high rule.', 'high', min(comp['complicated'], max(week['preterm'], weight['any_low'], weight['any_high']))),
         _rule('BR-09', 'Birth-Related', 'Preterm gestation', 'Preterm gestational age activates moderate birth-related risk.', 'moderate', week['preterm']),
         _rule('BR-10', 'Birth-Related', 'Post-term gestation', 'Post-term gestational age activates moderate birth-related risk.', 'moderate', week['postterm']),
         _rule('BR-11', 'Birth-Related', 'Low birth weight', 'Low birth weight activates moderate birth-related risk.', 'moderate', weight['low']),
         _rule('BR-12', 'Birth-Related', 'High birth weight', 'High birth weight activates moderate birth-related risk.', 'moderate', weight['high']),
-        _rule('BR-13', 'Birth-Related', 'Young maternal age', 'Young maternal age activates moderate birth-related risk.', 'moderate', age['any_young']),
-        _rule('BR-14', 'Birth-Related', 'Advanced maternal age', 'Advanced maternal age activates moderate birth-related risk.', 'moderate', age['advanced']),
+        _rule('BR-13', 'Birth-Related', 'Young maternal-age context', 'Maternal age adds limited contextual moderate activation (policy scale 0.25).', 'moderate', 0.25 * age['any_young']),
+        _rule('BR-14', 'Birth-Related', 'Advanced maternal-age context', 'Maternal age adds limited contextual moderate activation (policy scale 0.25).', 'moderate', 0.25 * age['advanced']),
         _rule('BR-15', 'Birth-Related', 'Reported delivery complication', 'A reported delivery complication activates moderate birth-related risk.', 'moderate', comp['complicated']),
         _rule('BR-16', 'Birth-Related', 'Term, normal weight, no complication', 'Term gestation, normal birth weight, and no reported complication support low birth-related risk.', 'low', min(week['term'], weight['normal'], comp['normal'])),
-        _rule('BR-17', 'Birth-Related', 'Term, normal weight, typical maternal age', 'Term gestation, normal birth weight, and typical maternal age support low birth-related risk.', 'low', min(week['term'], weight['normal'], age['normal'])),
     ]
     levels = _aggregate_rule_levels(rules)
     return (levels, rules) if return_rules else levels
@@ -758,13 +761,13 @@ def identify_assessment_factors(fuzzy_inputs, family_history_risk_index, family_
         fuzzy_inputs['maternal_age'], ('very_young', 'young', 'normal', 'advanced', 'very_advanced')
     )
     age_text = {
-        'very_young': ('Very young maternal age', 'Maternal-age membership is strongest in the very young set.', 'impact'),
-        'young': ('Young maternal age', 'Maternal-age membership is strongest in the young set.', 'impact'),
-        'normal': ('Typical maternal age range', 'Maternal-age membership is strongest in the typical range.', 'lowering'),
-        'advanced': ('Advanced maternal age', 'Maternal-age membership is strongest in the advanced set.', 'impact'),
-        'very_advanced': ('Very advanced maternal age', 'Maternal-age membership is strongest in the very advanced set.', 'impact'),
+        'very_young': ('Very young maternal age', 'Maternal age is contextual only (rule scale 0.25), with membership strongest in the very young set.', 'impact'),
+        'young': ('Young maternal age', 'Maternal age is contextual only (rule scale 0.25), with membership strongest in the young set.', 'impact'),
+        'normal': ('Typical maternal age range', 'Typical maternal age adds no adverse-age activation; reassuring newborn rules depend on gestation, weight and complication findings.', 'context'),
+        'advanced': ('Advanced maternal age', 'Maternal age is contextual only (rule scale 0.25), with membership strongest in the advanced set.', 'impact'),
+        'very_advanced': ('Very advanced maternal age', 'Maternal age is contextual only (rule scale 0.25), with membership strongest in the very advanced set.', 'impact'),
     }[age_key]
-    factors.append({'name': age_text[0], 'description': age_text[1], 'role': age_text[2], 'strength': age_strength})
+    factors.append({'name': age_text[0], 'description': age_text[1], 'role': age_text[2], 'strength': 0.25 * age_strength})
 
     complication_strength = float(fuzzy_inputs['delivery_comp']['complicated'])
     if complication_strength > 0:
@@ -1122,6 +1125,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     confidence = calculate_assessment_confidence(
         immediate_risk_levels, important_inputs_complete, {'status': 'no'}
     )
+    confidence['reasons'].append('This is heuristic immediate-rule clarity, not calibrated uncertainty, predictive accuracy or a probability. A safety override can make the rule separation High without establishing model validity.')
     main_factors, lower_impact_factors = identify_assessment_factors(
         fuzzy_inputs, family_history_risk_index, family_history, include_family=False
     )
@@ -1146,6 +1150,8 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         user_guidance['next_steps'] = [safety['action']]
     immediate_level = risk_level_for_index(immediate_condition_risk_index)
     birth_level = risk_level_for_index(birth_related_risk_index)
+    birth_monitoring = explain_birth_monitoring(birth_week, birth_weight_g, maternal_age, delivery_comp,
+                                               fuzzy_inputs, birth_rules, birth_related_risk_index, birth_level)
     if safety['active'] or any(n['urgency'] == 'urgent' for n in safety['notices']) or immediate_level == 'High':
         triage = 'Urgent evaluation'
     elif safety['notices'] or immediate_level == 'Moderate':
@@ -1180,7 +1186,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
                   f"Birth-Related Monitoring Index: {birth_related_risk_index:.1f} / 100. "
                   f"Family-History Follow-up Index: {family_history_risk_index:.1f} / 100. "
                   f"Family follow-up: {family_follow_up}. "
-                  f"Confidence: {confidence['level']}. {recommendation}")
+                  f"Rule clarity (heuristic): {confidence['level']}. {recommendation}")
 
     timeline = []
     for observation in sorted(apgar_observations or [], key=lambda o: o['minute']):
@@ -1238,6 +1244,11 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     if timeline:
         immediate_facts.append(f"{trend}. Inference uses the latest complete {timeline[-1]['minute']}-minute observation, without averaging scores.")
     immediate_facts.append(f"Final immediate-condition index: {immediate_condition_risk_index:.1f}/100 ({immediate_level}). Action priority: {triage}.")
+    if safety['active']:
+        alert_facts = '; '.join(f"{a['component'].title()} {a['score']}/2: {a['reason']}" for a in safety['alerts'])
+        immediate_facts.append(f"Reason for High: component safety override — {alert_facts}. The APGAR total alone did not set High; this numeric override is a conservative project policy, not a guideline-defined probability.")
+    else:
+        immediate_facts.append(f"No heartbeat/breathing safety override. The immediate index comes from APGAR {apgar_score}/10 and {'a reported' if delivery_comp else 'no reported'} delivery complication; component notices can separately change the action priority.")
     immediate_concerns = [a['reason'] for a in safety['alerts']] + [n['reason'] for n in safety['notices']]
     if delivery_comp:
         immediate_concerns.append('A delivery complication was reported; review it with the recorded APGAR findings.')
@@ -1251,12 +1262,13 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     module_actions = [
         {'module': 'Immediate condition', 'level': immediate_level, 'priority': triage, 'action': recommendation},
         {'module': 'Birth-related monitoring', 'level': birth_level,
-         'priority': 'Monitoring plan' if birth_level != 'Low' else 'Routine birth follow-up',
-         'action': 'Review gestation, weight and maternal context with the neonatal clinician and document a monitoring plan.' if birth_level != 'Low' else 'Continue routine birth-related follow-up appropriate to the clinical context.'},
+         'priority': birth_monitoring['priority'],
+         'action': ' '.join(birth_monitoring['actions'])},
         {'module': 'Family-history follow-up', 'level': family_follow_up_level, 'priority': 'Family-history plan', 'action': family_follow_up},
     ]
     return {
         'immediate_observation_summary': immediate_observation_summary,
+        'birth_monitoring': birth_monitoring,
         'immediate_facts': immediate_facts,
         'immediate_care_concerns': immediate_concerns,
         'immediate_recommended_actions': immediate_actions,
@@ -1269,7 +1281,7 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         'repeat_observation_status': repeat_status,
         'repeat_observation_message': repeat_message,
         'assessment_semantics': 'separate-v3',
-        'assessment_policy_version': 'fuzzy-v5-module-actions',
+        'assessment_policy_version': 'fuzzy-v6-birth-monitoring',
         'inference_input_summary': {
             'reference_minute': timeline[-1]['minute'] if timeline else None,
             'components': {'appearance': appearance, 'pulse': pulse, 'grimace': grimace, 'activity': activity, 'respiration': respiration},

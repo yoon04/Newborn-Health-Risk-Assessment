@@ -178,7 +178,7 @@ class AssessmentExplanationTests(unittest.TestCase):
         self.assertNotIn('Overall Risk Index Chart', html)
         self.assertIn('Risk Index:', html)
         self.assertIn('Level:', html)
-        self.assertIn('Confidence Basis', html)
+        self.assertIn('Rule clarity basis (heuristic)', html)
         self.assertIn('Important Triggered Fuzzy Rules', html)
         self.assertNotIn('65.0% risk', html)
 

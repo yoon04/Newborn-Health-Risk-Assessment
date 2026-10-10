@@ -1,0 +1,67 @@
+{
+  "status": "research_only",
+  "model": "Calibrated histogram gradient boosting V2",
+  "training_dataset": "CDC 2024 U.S. natality",
+  "dataset_sha256": "8ce1c61bc055b3327311985f918db5387ea6a1ed7d34b367afe30f468b92225a",
+  "features": [
+    "gestational_age_weeks",
+    "birth_weight_g",
+    "maternal_age"
+  ],
+  "target": "Recorded NICU admission",
+  "population": {
+    "singleton_only": true,
+    "gestational_age_weeks": [
+      20,
+      45
+    ],
+    "birth_weight_g": [
+      227,
+      5999
+    ],
+    "maternal_age": [
+      13,
+      49
+    ]
+  },
+  "seed": 42,
+  "research_threshold": 0.1,
+  "threshold_clinically_approved": false,
+  "validation_metrics": {
+    "n": 24000,
+    "prevalence": 0.08666666666666667,
+    "auroc": 0.797344002228383,
+    "auprc": 0.5398217241607579,
+    "brier": 0.053896618267209664,
+    "threshold": 0.1,
+    "sensitivity": 0.5610576923076923,
+    "specificity": 0.924771897810219,
+    "ppv": 0.41441761363636365,
+    "tn": 20271,
+    "fp": 1649,
+    "fn": 913,
+    "tp": 1167
+  },
+  "term_validation_metrics": {
+    "n": 21922,
+    "prevalence": 0.04716722926740261,
+    "auroc": 0.6290993709103058,
+    "auprc": 0.10319686901370592,
+    "brier": 0.04404757423655888,
+    "threshold": 0.1,
+    "sensitivity": 0.11702127659574468,
+    "specificity": 0.9703178858674837,
+    "ppv": 0.1632928475033738,
+    "tn": 20268,
+    "fp": 620,
+    "fn": 913,
+    "tp": 121
+  },
+  "versions": {
+    "numpy": "2.1.3",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.6.1",
+    "joblib": "1.6.0"
+  },
+  "evaluation_plan": "Evaluate unchanged on CDC 2023 after verifying its layout; historical transportability check, not future-year validation."
+}

@@ -134,7 +134,7 @@ class TimedApgarTests(unittest.TestCase):
         self.assertEqual(result['apgar_timeline'][1]['action_label'],'Routine observation')
         self.assertEqual(len(result['module_actions']),3)
         self.assertEqual(result['module_actions'][0]['priority'],'Routine care and observation')
-        self.assertEqual(result['module_actions'][1]['priority'],'Monitoring plan')
+        self.assertEqual(result['module_actions'][1]['priority'],'Prompt neonatal monitoring review')
         self.assertEqual(result['overall_risk_index'],result['immediate_condition_risk_index'])
         self.assertIsNone(_plots.call_args.args[1])
 
