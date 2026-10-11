@@ -5,6 +5,7 @@
 .brand em{color:#0f766e;font-style:italic}
 .brand-mark{width:36px;height:36px;border-radius:11px;background:#ecfdf3;border:1px solid #e2d9cb;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.nav-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .nav-links a{text-decoration:none;color:#6b7280;font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;transition:all .2s;white-space:nowrap}
 .nav-links a:hover{color:#0f766e;background:rgba(15,118,110,.07)}
 .nav-links a.active{color:#0f766e;background:rgba(15,118,110,.1)}
@@ -12,4 +13,12 @@
 .profile-chip .avatar{width:26px;height:26px;border-radius:50%;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .logout-link{color:#b91c1c!important}
 .logout-link:hover{background:rgba(220,38,38,.08)!important;color:#dc2626!important}
-@media(max-width:700px){.brand-text{display:none}}
+.language-switch{display:inline-flex;align-items:center;padding:3px;background:#f1f5f4;border:1px solid #d8e3df;border-radius:10px;gap:2px}
+.language-form{margin:0}
+.language-button{appearance:none;border:0;background:transparent;color:#59656f;border-radius:7px;padding:6px 9px;font:600 12px/1.2 'Plus Jakarta Sans',Arial,sans-serif;cursor:pointer;white-space:nowrap}
+.language-button:hover{color:#0f766e;background:rgba(255,255,255,.7)}
+.language-button.active{background:#fff;color:#0f766e;box-shadow:0 1px 4px rgba(17,24,39,.12)}
+.auth-language{position:fixed;top:18px;right:18px;z-index:5}
+html[lang="my"] body,html[lang="my"] button,html[lang="my"] input,html[lang="my"] select,html[lang="my"] textarea{font-family:"Myanmar Text","Noto Sans Myanmar","Pyidaungsu",Arial,sans-serif!important}
+html[lang="my"] .clinical-warning::before{content:'အရေးပေါ် သတိပေးချက်';letter-spacing:0;text-transform:none}
+@media(max-width:700px){.brand-text{display:none}.nav-inner{align-items:flex-start}.nav-actions{width:100%;justify-content:space-between}.nav-links a{padding:7px 9px}.auth-language{top:10px;right:10px}}

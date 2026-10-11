@@ -15,6 +15,7 @@ Important: This tool is educational only and is not a medical diagnosis.
 ## Features
 
 - Multi-step form for complete newborn input
+- User-selectable English and Burmese interface; the preference persists in the browser session
 - APGAR score breakdown with per-component meaning
 - Fuzzy logic inference for birth-factor risk
 - Simple family-history input: Yes, No, or Unknown
@@ -30,6 +31,10 @@ Important: This tool is educational only and is not a medical diagnosis.
   - Family-history indicator chart (when a disease is provided)
   - Final risk defuzzification chart
 - Downloadable PDF matching the detailed results page, including APGAR details, birth information, module indices, family-history results, contributing factors, triggered rules, charts, and the final assessment
+
+## Language support
+
+Use the `English / မြန်မာ` control in the top navigation to change the display language. Burmese translations are stored locally in `static/i18n.js`, so this feature does not require a translation API key or an internet connection. Medical abbreviations and technical model terms remain in English where that is clearer. Changing the display language does not change submitted field values, saved assessment data, risk calculations, or model inputs. Downloaded clinical PDF reports remain in English.
 
 ## Project Structure
 
@@ -52,6 +57,7 @@ Newborn-Health-Risk-Assessment/
 |   |-- register.html
 |   `-- results.html
 `-- static/
+    |-- i18n.js
     `-- (generated chart images)
 ```
 

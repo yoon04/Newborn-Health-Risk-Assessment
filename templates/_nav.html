@@ -1,1 +1,13 @@
-<header class="site-nav"><div class="nav-inner"><a class="brand" href="{{ url_for('index') }}">Neonatal Assessment Dashboard</a><nav class="nav-links"><a href="{{ url_for('index') }}"{% if active_nav == 'assess' %} class="active"{% endif %}>New Assessment</a><a href="{{ url_for('assessment_history') }}"{% if active_nav == 'history' %} class="active"{% endif %}>Shared History</a></nav></div></header>
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="brand" href="{{ url_for('index') }}">Neonatal Assessment Dashboard</a>
+    <div class="nav-actions">
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="{{ url_for('index') }}"{% if active_nav == 'assess' %} class="active"{% endif %}>New Assessment</a>
+        <a href="{{ url_for('assessment_history') }}"{% if active_nav == 'history' %} class="active"{% endif %}>Shared History</a>
+      </nav>
+      {% include '_language_switch.html' %}
+    </div>
+  </div>
+</header>
+{% include '_language_runtime.html' %}

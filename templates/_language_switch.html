@@ -1,0 +1,10 @@
+<div class="language-switch" role="group" aria-label="Preferred language">
+  <form class="language-form" method="post" action="{{ url_for('set_language', language='en') }}">
+    <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+    <button class="language-button{% if current_language == 'en' %} active{% endif %}" type="submit" lang="en" aria-pressed="{{ 'true' if current_language == 'en' else 'false' }}">English</button>
+  </form>
+  <form class="language-form" method="post" action="{{ url_for('set_language', language='my') }}">
+    <input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+    <button class="language-button{% if current_language == 'my' %} active{% endif %}" type="submit" lang="my" aria-pressed="{{ 'true' if current_language == 'my' else 'false' }}">မြန်မာ</button>
+  </form>
+</div>

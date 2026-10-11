@@ -7,7 +7,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from flask import Flask, abort, redirect, render_template, request, send_file, url_for
+from flask import Flask, abort, redirect, render_template, request, send_file, session, url_for
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -343,6 +343,28 @@ def _safe_next_url(target):
     if parsed.scheme or parsed.netloc or not target.startswith('/') or target.startswith('//'):
         return None
     return target
+
+
+SUPPORTED_LANGUAGES = {'en', 'my'}
+DEFAULT_LANGUAGE = 'en'
+
+
+@app.context_processor
+def inject_language_preference():
+    """Expose the visitor's display language to every template."""
+    language = session.get('language', DEFAULT_LANGUAGE)
+    if language not in SUPPORTED_LANGUAGES:
+        language = DEFAULT_LANGUAGE
+    return {'current_language': language}
+
+
+@app.post('/language/<language>')
+def set_language(language):
+    """Persist a supported display language without changing assessment data."""
+    if language not in SUPPORTED_LANGUAGES:
+        abort(404)
+    session['language'] = language
+    return redirect(_safe_next_url(request.form.get('next')) or url_for('index'))
 
 
 def render_assessment_form(errors=None, form_data=None, family_rows=None,
