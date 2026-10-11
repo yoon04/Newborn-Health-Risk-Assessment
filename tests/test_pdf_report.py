@@ -125,25 +125,31 @@ class PdfReportTests(unittest.TestCase):
         }
         stream = build_pdf_report(report)
         reader = PdfReader(stream)
-        text = '\n'.join(page.extract_text() or '' for page in reader.pages)
+        text = ' '.join('\n'.join(page.extract_text() or '' for page in reader.pages).split())
 
         self.assertGreaterEqual(len(reader.pages), 1)
         self.assertEqual(reader.metadata.title, 'Newborn Health Risk Assessment Results')
         self.assertIn('APGAR Score Breakdown', text)
+        self.assertIn('1. Immediate observations and birth record', text)
         self.assertIn('Birth Summary', text)
         self.assertIn('Meconium-stained', text)
         self.assertIn('Umbilical cord', text)
         self.assertIn('individual types do', text)
         self.assertIn('not receive separate numerical weights', text)
         self.assertIn('Immediate Condition Risk', text)
+        self.assertIn('2. Assessment module results', text)
         self.assertIn('Birth-Related Risk', text)
         self.assertIn('Family-History Risk', text)
         self.assertIn('Congenital Deafness', text)
         self.assertIn('Cystic fibrosis', text)
-        self.assertIn('Birth Chart Summary', text)
+        self.assertIn('3. ML research estimate', text)
+        self.assertIn('4. Charts and clinical monitoring details', text)
+        self.assertIn('Birth input charts', text)
+        self.assertIn('5. Recommended actions and result', text)
         self.assertIn('Overall Assessment Result', text)
         self.assertIn('Rule clarity basis (heuristic)', text)
         self.assertIn('Assessment Factors', text)
+        self.assertIn('6. Supporting assessment details', text)
         self.assertIn('Important Triggered Fuzzy Rules', text)
         self.assertIn('Overall Risk Index Chart', text)
         self.assertIn('65.4 / 100', text)
@@ -159,6 +165,27 @@ class PdfReportTests(unittest.TestCase):
         self.assertEqual(response.mimetype, 'application/pdf')
         self.assertIn('newborn_health_risk_summary.pdf', response.headers['Content-Disposition'])
         self.assertTrue(response.data.startswith(b'%PDF'))
+
+    def test_major_pdf_sections_start_on_separate_pages(self):
+        reader = PdfReader(build_pdf_report(sample_report()))
+        pages = [' '.join((page.extract_text() or '').split()) for page in reader.pages]
+        headings = [
+            '1. Immediate observations and birth record',
+            '2. Assessment module results',
+            '3. ML research estimate',
+            '4. Charts and clinical monitoring details',
+            '5. Recommended actions and result',
+            '6. Supporting assessment details',
+        ]
+        heading_pages = []
+        for heading in headings:
+            matches = [index for index, text in enumerate(pages) if heading in text]
+            self.assertEqual(len(matches), 1, heading)
+            heading_pages.append(matches[0])
+        self.assertEqual(len(set(heading_pages)), len(headings))
+        self.assertGreaterEqual(min(heading_pages), 1)
+        self.assertIn('Birth Summary', pages[0])
+        self.assertNotIn('1. Immediate observations and birth record', pages[0])
 
     def test_download_endpoint_rejects_tampered_token(self):
         response = self.client.post('/report.pdf', data={'report_token': 'tampered'})

@@ -8,7 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
-from reportlab.platypus import Image, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
 TEAL = colors.HexColor('#0F766E')
@@ -95,6 +95,22 @@ def _section_heading(title, heading_style):
     return _paragraph(title, heading_style)
 
 
+def _major_section_heading(title, heading_style):
+    banner = Table([[_paragraph(title, heading_style)]], colWidths=[174 * mm])
+    banner.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), TEAL),
+        ('BOX', (0, 0), (-1, -1), 0.8, TEAL),
+        ('LEFTPADDING', (0, 0), (-1, -1), 9),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+    ]))
+    banner.spaceBefore = 4 * mm
+    banner.spaceAfter = 3 * mm
+    banner.keepWithNext = True
+    return banner
+
+
 def _bullet_paragraphs(items, style):
     return [
         Paragraph(f'<bullet>&bull;</bullet>{escape(_ascii_text(item))}', style, bulletText='-')
@@ -104,7 +120,7 @@ def _bullet_paragraphs(items, style):
 
 def _birth_summary_heading(report):
     baby_name = str(report.get('baby_name') or '').strip()
-    return f'Birth Summary of {baby_name}' if baby_name else 'Birth Summary'
+    return f'Birth Summary of {baby_name}' if baby_name else 'Birth Summary of the Newborn Baby'
 
 
 def build_pdf_report(report):
@@ -124,29 +140,34 @@ def build_pdf_report(report):
     sample_styles = getSampleStyleSheet()
     title_style = ParagraphStyle(
         'ReportTitle', parent=sample_styles['Title'], fontName='Helvetica-Bold',
-        fontSize=20, leading=24, textColor=DARK, alignment=TA_CENTER, spaceAfter=2 * mm,
+        fontSize=22, leading=28, textColor=DARK, alignment=TA_CENTER, spaceAfter=3 * mm,
     )
     subtitle_style = ParagraphStyle(
         'ReportSubtitle', parent=sample_styles['Normal'], fontName='Helvetica',
-        fontSize=9, leading=12, textColor=MUTED, alignment=TA_CENTER, spaceAfter=4 * mm,
+        fontSize=11, leading=16, textColor=MUTED, alignment=TA_CENTER, spaceAfter=5 * mm,
     )
     heading_style = ParagraphStyle(
         'SectionHeading', parent=sample_styles['Heading2'], fontName='Helvetica-Bold',
-        fontSize=12, leading=15, textColor=DARK, spaceBefore=1.5 * mm, spaceAfter=2 * mm,
+        fontSize=15, leading=20, textColor=TEAL, spaceBefore=4 * mm, spaceAfter=2.5 * mm,
+        keepWithNext=True,
+    )
+    major_heading_style = ParagraphStyle(
+        'MajorSectionHeading', parent=sample_styles['Heading1'], fontName='Helvetica-Bold',
+        fontSize=17, leading=22, textColor=colors.white, spaceAfter=0,
     )
     body_style = ParagraphStyle(
         'Body', parent=sample_styles['BodyText'], fontName='Helvetica',
-        fontSize=8.7, leading=12.5, textColor=DARK, alignment=TA_LEFT,
+        fontSize=11, leading=16, textColor=DARK, alignment=TA_LEFT, spaceAfter=1.5 * mm,
     )
-    small_style = ParagraphStyle('Small', parent=body_style, fontSize=7.8, leading=10.5, textColor=MUTED)
+    small_style = ParagraphStyle('Small', parent=body_style, fontSize=11, leading=16, textColor=MUTED)
     label_style = ParagraphStyle(
-        'Label', parent=body_style, fontName='Helvetica-Bold', fontSize=8.3, textColor=MUTED,
+        'Label', parent=body_style, fontName='Helvetica-Bold', fontSize=11, leading=16, textColor=MUTED,
     )
     header_style = ParagraphStyle('TableHeader', parent=label_style, textColor=colors.white)
     center_style = ParagraphStyle('Center', parent=body_style, alignment=TA_CENTER)
     bullet_style = ParagraphStyle(
         'Bullet', parent=body_style, leftIndent=10, firstLineIndent=-7,
-        bulletIndent=2, spaceAfter=2,
+        bulletIndent=2, spaceAfter=5,
     )
 
     story = [
@@ -158,6 +179,39 @@ def build_pdf_report(report):
     generated_at = report.get('generated_at', '')
     if generated_at:
         story.append(_paragraph(f'Generated: {generated_at}', small_style))
+
+    inputs = report.get('inputs', {})
+    birth_cells = [
+        ('Gestational Age', f"{inputs.get('birth_week', '')} weeks"),
+        ('Birth Weight', inputs.get('birth_weight', '')),
+        ("Mother's Age", f"{inputs.get('maternal_age', '')} years"),
+        ("Child's Gender", inputs.get('child_gender', '')),
+        ('Delivery Method', inputs.get('delivery_type', '')),
+        ('Delivery Complication', inputs.get('delivery_complication', '')),
+    ]
+    birth_rows = []
+    birth_value_style = ParagraphStyle('BirthValue', parent=body_style, fontName='Helvetica-Bold', fontSize=11)
+    for row_start in range(0, len(birth_cells), 3):
+        birth_rows.append([
+            [_paragraph(label, label_style), _paragraph(value, birth_value_style)]
+            for label, value in birth_cells[row_start:row_start + 3]
+        ])
+    birth_table = Table(birth_rows, colWidths=[58 * mm] * 3)
+    birth_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), PALE), ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8), ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.extend([Spacer(1, 7 * mm), _section_heading(_birth_summary_heading(report), heading_style), birth_table])
+    if str(inputs.get('delivery_complication', '')).startswith('Yes'):
+        story.extend(_bullet_paragraphs([
+            'Selected complication types provide clinical context.',
+            'The calculation uses only whether any complication was reported; individual types do not receive separate numerical weights.',
+        ], bullet_style))
+
+    story.append(PageBreak())
+    story.append(_major_section_heading('1. Immediate observations and birth record', major_heading_style))
 
     safety = report.get('safety_override', {})
     if safety.get('active'):
@@ -214,58 +268,39 @@ def build_pdf_report(report):
     ]))
     story.extend([_section_heading('APGAR Score Breakdown', heading_style), apgar_overview])
 
-    component_cells = []
+    component_rows = [[
+        _paragraph('Component', header_style),
+        _paragraph('Score', header_style),
+        _paragraph('Recorded finding', header_style),
+        _paragraph('Meaning', header_style),
+    ]]
     for component in apgar.get('components', []):
         score = int(component.get('score', 0))
         score_color = RED if score == 0 else AMBER if score == 1 else GREEN
-        component_cells.append([
+        component_rows.append([
             _paragraph(component.get('name', ''), label_style),
             Paragraph(
                 f'<font color="{score_color.hexval()}"><b>{score} / 2</b></font>',
                 ParagraphStyle('ComponentScore', parent=center_style, fontSize=14, leading=17),
             ),
-            _paragraph(component.get('label', ''), center_style),
+            _paragraph(component.get('label', ''), body_style),
             _paragraph(component.get('note', ''), small_style),
         ])
-    if component_cells:
-        component_table = Table([component_cells], colWidths=[34.8 * mm] * len(component_cells))
+    if len(component_rows) > 1:
+        component_table = Table(component_rows, colWidths=[34 * mm, 23 * mm, 50 * mm, 67 * mm], repeatRows=1)
         component_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.white), ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5), ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 6), ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (0, 0), (-1, 0), TEAL),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN', (1, 1), (1, -1), 'CENTER'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 7), ('RIGHTPADDING', (0, 0), (-1, -1), 7),
+            ('TOPPADDING', (0, 0), (-1, -1), 7), ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
         ]))
         story.extend([Spacer(1, 2 * mm), component_table])
 
-    inputs = report.get('inputs', {})
-    birth_cells = [
-        ('Gestational Age', f"{inputs.get('birth_week', '')} weeks"),
-        ('Birth Weight', inputs.get('birth_weight', '')),
-        ("Mother's Age", f"{inputs.get('maternal_age', '')} years"),
-        ("Child's Gender", inputs.get('child_gender', '')),
-        ('Delivery Method', inputs.get('delivery_type', '')),
-        ('Delivery Complication', inputs.get('delivery_complication', '')),
-    ]
-    birth_rows = []
-    birth_value_style = ParagraphStyle('BirthValue', parent=body_style, fontName='Helvetica-Bold', fontSize=10)
-    for row_start in range(0, len(birth_cells), 3):
-        birth_rows.append([
-            [_paragraph(label, label_style), _paragraph(value, birth_value_style)]
-            for label, value in birth_cells[row_start:row_start + 3]
-        ])
-    birth_table = Table(birth_rows, colWidths=[58 * mm] * 3)
-    birth_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), PALE), ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 7),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 7), ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    story.extend([_section_heading(_birth_summary_heading(report), heading_style), birth_table])
-    if str(inputs.get('delivery_complication', '')).startswith('Yes'):
-        story.append(_paragraph(
-            'Selected complication types provide clinical context. The calculation uses only whether any complication was reported; individual types do not receive separate numerical weights.',
-            small_style,
-        ))
+    story.append(PageBreak())
+    story.append(_major_section_heading('2. Assessment module results', major_heading_style))
 
     for module in report.get('risk_modules', []):
         risk_index = float(module.get('risk_index', 0))
@@ -278,7 +313,7 @@ def build_pdf_report(report):
             ),
             Paragraph(
                 f'<b>{_escaped(module.get("label", module.get("name", "")))}</b><br/>'
-                f'<font size="8">Risk Index: <b>{risk_index:.1f} / 100</b> &nbsp; '
+                f'<font size="11">Risk Index: <b>{risk_index:.1f} / 100</b> &nbsp; '
                 f'Risk Level: <b>{_escaped(module.get("level", level))}</b></font><br/>'
                 f'{_escaped(module.get("description", ""))}', body_style,
             ),
@@ -321,7 +356,9 @@ def build_pdf_report(report):
         story.append(_paragraph(f"Twin 1: {twins['twin_1_name']}; Twin 2: {twins['twin_2_name']}. This report assesses Twin {twins['assessed_twin']} only. The other twin requires a separate assessment.", body_style))
 
     ml = report.get('ml_research')
-    story.append(_section_heading('ML research estimate: recorded NICU admission', heading_style))
+    story.append(PageBreak())
+    story.append(_major_section_heading('3. ML research estimate', major_heading_style))
+    story.append(_section_heading('Recorded NICU admission estimate', heading_style))
     if ml and ml.get('status') == 'available':
         story.append(_paragraph(f"Research-only estimate: {ml['probability_percent']:.1f}% probability of recorded NICU admission. Model: {ml['model_version']}.", body_style))
         inputs_ml = ml.get('inputs', {})
@@ -330,14 +367,33 @@ def build_pdf_report(report):
         if encoding_ml:
             story.append(_paragraph(f"Recorded gestation: {encoding_ml['recorded_gestational_weeks']} weeks. ML uses {encoding_ml['completed_gestational_weeks']} completed weeks in CDC format. Clinical and fuzzy inputs remain unchanged.", body_style))
         evaluation_ml = ml.get('evaluation', {})
-        story.append(_paragraph(f"Historical 2023 evaluation: n={evaluation_ml.get('n')}; AUROC={evaluation_ml.get('auroc', 0):.3f}; AUPRC={evaluation_ml.get('auprc', 0):.3f}; Brier={evaluation_ml.get('brier', 0):.4f}.", body_style))
+        metric_rows = [
+            [_paragraph('Metric', header_style), _paragraph('Value', header_style), _paragraph('Meaning', header_style)],
+            [_paragraph('AUROC - Area Under the Receiver Operating Characteristic Curve', body_style), _paragraph(f"{evaluation_ml.get('auroc', 0):.3f}", body_style), _paragraph('Separates admissions from non-admissions across thresholds. Higher is better; 0.5 is similar to chance and 1.0 is perfect separation.', small_style)],
+            [_paragraph('AUPRC - Area Under the Precision-Recall Curve', body_style), _paragraph(f"{evaluation_ml.get('auprc', 0):.3f}", body_style), _paragraph('Summarizes precision and recall for admission. Higher is better, but the value depends on admission prevalence.', small_style)],
+            [_paragraph('Brier score - probability prediction error score (not an abbreviation)', body_style), _paragraph(f"{evaluation_ml.get('brier', 0):.4f}", body_style), _paragraph('Average squared difference between predicted probabilities and recorded outcomes. Lower is better; 0 is perfect.', small_style)],
+        ]
+        metric_table = Table(metric_rows, colWidths=[62 * mm, 22 * mm, 90 * mm], repeatRows=1)
+        metric_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), TEAL), ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6), ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        story.extend([
+            _section_heading('Historical 2023 model evaluation', heading_style),
+            _paragraph(f"Evaluation records: {evaluation_ml.get('n')}", small_style),
+            Spacer(1, 1.5 * mm), metric_table,
+        ])
     else:
         story.append(_paragraph('Estimate unavailable. ' + (ml.get('reason', '') if ml else 'No ML estimate was recorded for this assessment.'), body_style))
-    story.append(_paragraph('Research only. A low estimate cannot establish safety. APGAR alerts and module actions remain independent; this estimate does not determine admission, treatment, or discharge.', body_style))
+    ml_facts = ['Research only: a low estimate cannot establish safety. APGAR alerts and module actions remain independent; this estimate does not determine admission, treatment, or discharge.']
     if ml:
-        story.append(_paragraph(ml.get('scope', ''), small_style))
-        for limitation in ml.get('limitations', []):
-            story.append(_paragraph(limitation, small_style))
+        if ml.get('scope'):
+            ml_facts.append(ml['scope'])
+        ml_facts.extend(ml.get('limitations', []))
+    story.append(_section_heading('Model scope and interpretation facts', heading_style))
+    story.extend(_bullet_paragraphs(ml_facts, bullet_style))
 
     plot_paths = report.get('plot_paths', {})
     birth_charts = [
@@ -351,6 +407,10 @@ def build_pdf_report(report):
         chart_image = _scaled_image(path_value, 82 * mm, 46 * mm)
         if chart_image is not None:
             chart_cells.append([_paragraph(chart_title, label_style), Spacer(1, 1 * mm), chart_image])
+    story.append(PageBreak())
+    story.append(_major_section_heading('4. Charts and clinical monitoring details', major_heading_style))
+    if not chart_cells and not report.get('immediate_observation_summary') and not report.get('birth_monitoring'):
+        story.append(_paragraph('No additional charts or clinical monitoring details were recorded for this report.', small_style))
     if chart_cells:
         chart_rows = []
         for row_start in range(0, len(chart_cells), 2):
@@ -365,7 +425,7 @@ def build_pdf_report(report):
             ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ]))
         story.append(KeepTogether([
-            _section_heading('Birth Chart Summary', heading_style),
+            _section_heading('Birth input charts', heading_style),
             chart_table,
         ]))
 
@@ -373,46 +433,61 @@ def build_pdf_report(report):
         chart = _scaled_image(plot_paths.get('immediate'), 174 * mm, 82 * mm)
         if chart is not None:
             story.append(chart)
-        story.append(_paragraph('Graph interpretation: curves represent fuzzy rule activation; the vertical line marks the centre-of-area risk index. The index is not a probability; component alerts independently guide action.', small_style))
+        story.extend(_bullet_paragraphs(['Graph interpretation: curves represent fuzzy rule activation; the vertical line marks the centre-of-area risk index.', 'The index is not a probability; component alerts independently guide action.'], bullet_style))
         story.append(_section_heading('Immediate observation summary and final result', heading_style))
-        story.append(_paragraph(report['immediate_observation_summary'], body_style))
+        immediate_facts = report.get('immediate_facts') or [report['immediate_observation_summary']]
+        story.extend(_bullet_paragraphs(immediate_facts, bullet_style))
     if report.get('birth_monitoring'):
         birth = report['birth_monitoring']
         story.append(_section_heading('Recorded birth findings and final result', heading_style))
         if birth.get('finding_facts'):
-            for fact in birth['finding_facts']:
-                story.append(_paragraph(fact, body_style))
+            story.extend(_bullet_paragraphs(birth['finding_facts'], bullet_style))
             story.append(_section_heading('Reason for this result', heading_style))
-            for fact in birth['reason_facts']:
-                story.append(_paragraph(fact, body_style))
+            story.extend(_bullet_paragraphs(birth['reason_facts'], bullet_style))
         elif birth.get('summary'):
-            story.append(_paragraph(birth['summary'], body_style))
+            story.extend(_bullet_paragraphs([birth['summary']], bullet_style))
             story.append(_section_heading('Reason for this result', heading_style))
-            story.append(_paragraph(birth['result_reason'], body_style))
+            story.extend(_bullet_paragraphs([birth['result_reason']], bullet_style))
         else:
-            for finding in birth['inputs']:
-                story.append(_paragraph(f"{finding['name']}: {finding['value']} - {finding['category']}.", body_style))
-            story.append(_paragraph(birth['final_result'], body_style))
+            fallback_facts = [f"{finding['name']}: {finding['value']} - {finding['category']}." for finding in birth['inputs']]
+            fallback_facts.append(birth['final_result'])
+            story.extend(_bullet_paragraphs(fallback_facts, bullet_style))
         for title, key in [('Monitoring concerns', 'concerns'), ('Recommended monitoring actions', 'actions')]:
             story.append(_section_heading(title, heading_style))
-            for line in birth[key]:
-                story.append(_paragraph(line, body_style))
-        story.append(_paragraph(birth['explanation'], small_style))
-        story.append(_paragraph(birth['limitations'], small_style))
+            story.extend(_bullet_paragraphs(birth[key], bullet_style))
+        story.append(_section_heading('Method and limitations', heading_style))
+        story.extend(_bullet_paragraphs([birth['explanation'], birth['limitations']], bullet_style))
+    story.append(PageBreak())
     if report.get('module_actions'):
-        story.append(_section_heading('Recommended actions by module', heading_style))
-        for action in report['module_actions']:
-            story.append(_paragraph(f"{action['module']}: {action['level']} - {action['priority']}", body_style))
-            story.append(_paragraph(action['action'], body_style))
-    elif report.get('assessment_semantics') == 'separate-v3':
+        actions = report['module_actions']
         story.extend([
+            _major_section_heading('5. Recommended actions and result', major_heading_style),
+            _section_heading('Recommended actions by module', heading_style),
+        ])
+        module_titles = {
+            'Immediate condition': 'Immediate Condition Risk',
+            'Birth-related monitoring': 'Birth-Related Monitoring',
+            'Family-history follow-up': 'Family-History Follow-up',
+        }
+        for action in actions:
+            story.append(KeepTogether([
+                _section_heading(module_titles.get(action['module'], action['module']), heading_style),
+                *_bullet_paragraphs([
+                    f"Risk level: {action['level']}.",
+                    f"Priority: {action['priority']}.",
+                    action['action'],
+                ], bullet_style),
+            ]))
+    elif report.get('assessment_semantics') == 'separate-v3':
+        story.append(KeepTogether([
+            _major_section_heading('5. Recommended actions and result', major_heading_style),
             _section_heading('Overall Triage', heading_style),
             _paragraph(report.get('overall_triage', ''), body_style),
             _paragraph(report.get('recommendation', ''), body_style),
             _paragraph('Immediate condition and birth-related monitoring determine triage. Family history guides follow-up separately.', small_style),
             _section_heading('Family-History Follow-up Plan', heading_style),
             _paragraph(report.get('family_history_follow_up', ''), body_style),
-        ])
+        ]))
     else:
         overall_risk_index = float(report.get('overall_risk_index', 0))
         final_level, final_color = _risk_label(overall_risk_index)
@@ -424,10 +499,10 @@ def build_pdf_report(report):
             ),
             Paragraph(
                 '<b>Hierarchical fuzzy result from immediate, birth-related, and family-history modules</b><br/>'
-                f'Risk Index: <b>{overall_risk_index:.1f} / 100</b> &nbsp; '
+                f'<font size="11">Risk Index: <b>{overall_risk_index:.1f} / 100</b> &nbsp; '
                 f'Risk Level: <b>{_escaped(report.get("risk_level", final_level))}</b> &nbsp; '
                 f'Rule clarity (heuristic): <b>{_escaped(report.get("confidence_level", "Low"))}</b><br/>'
-                f'{_escaped(report.get("recommendation", ""))}', body_style,
+                f'{_escaped(report.get("recommendation", ""))}</font>', body_style,
             ),
         ]], colWidths=[40 * mm, 134 * mm])
         overall_box.setStyle(TableStyle([
@@ -436,8 +511,14 @@ def build_pdf_report(report):
             ('RIGHTPADDING', (0, 0), (-1, -1), 9), ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ]))
-        story.extend([_section_heading('Overall Assessment Result', heading_style), overall_box])
+        story.append(KeepTogether([
+            _major_section_heading('5. Recommended actions and result', major_heading_style),
+            _section_heading('Overall Assessment Result', heading_style),
+            overall_box,
+        ]))
 
+    story.append(PageBreak())
+    story.append(_major_section_heading('6. Supporting assessment details', major_heading_style))
     confidence_reasons = report.get('confidence_reasons', [])
     if confidence_reasons:
         story.append(KeepTogether([

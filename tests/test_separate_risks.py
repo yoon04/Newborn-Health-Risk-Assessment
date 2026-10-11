@@ -53,12 +53,15 @@ class SeparateRiskTests(unittest.TestCase):
             html = render_template('results.html', results=result)
         report = sample_report()
         report.update({k: result[k] for k in ('assessment_semantics', 'overall_triage', 'family_history_follow_up', 'recommendation', 'module_actions')})
-        text = '\n'.join(page.extract_text() for page in PdfReader(build_pdf_report(report)).pages)
+        text = ' '.join('\n'.join(page.extract_text() for page in PdfReader(build_pdf_report(report)).pages).split())
         for output in (html, text):
             self.assertIn('Recommended actions by module', output)
-            self.assertIn('Family-history follow-up', output)
+            self.assertIn('family-history follow-up', output.lower())
             self.assertNotIn('Overall Risk Index Chart', output)
             self.assertNotIn('Hierarchical fuzzy result from immediate, birth-related, and family-history', output)
+        self.assertIn('Immediate Condition Risk', text)
+        self.assertIn('Birth-Related Monitoring', text)
+        self.assertIn('Family-History Follow-up', text)
 
     @patch('fuzzy_logic.generate_visualizations', side_effect=plots)
     def test_saved_snapshot_and_pdf_payload_preserve_separate_semantics(self, _plots):

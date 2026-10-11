@@ -94,7 +94,7 @@ class ApgarSafetyTests(unittest.TestCase):
         self.assertIn('No heartbeat detected', html)
         report = sample_report()
         report['safety_override'] = result['safety_override']
-        text = '\n'.join(page.extract_text() for page in PdfReader(build_pdf_report(report)).pages)
+        text = ' '.join('\n'.join(page.extract_text() for page in PdfReader(build_pdf_report(report)).pages).split())
         self.assertIn('Urgent APGAR component alert', text)
         self.assertIn('No heartbeat detected', text)
         self.assertIn('Do not wait', text)

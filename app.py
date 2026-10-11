@@ -399,6 +399,7 @@ def build_report_payload(values, results):
         'twin_context': results.get('twin_context'),
         'birth_monitoring': results.get('birth_monitoring', {}),
         'immediate_observation_summary': results.get('immediate_observation_summary', ''),
+        'immediate_facts': results.get('immediate_facts', []),
         'module_actions': results.get('module_actions', []),
         'inference_input_summary': results.get('inference_input_summary', {}),
         'repeat_observation_status': results.get('repeat_observation_status'),

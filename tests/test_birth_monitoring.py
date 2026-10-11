@@ -164,7 +164,7 @@ class BirthMonitoringExplanationTests(unittest.TestCase):
         with application.app.test_request_context('/'):
             html = render_template('results.html', results=result)
             detail = render_template('assessment_detail.html', assessment=record, plots={})
-        pdf = '\n'.join(p.extract_text() for p in PdfReader(build_pdf_report(payload)).pages)
+        pdf = ' '.join('\n'.join(p.extract_text() for p in PdfReader(build_pdf_report(payload)).pages).split())
         self.assertEqual(record.result_snapshot['birth_monitoring'], result['birth_monitoring'])
         for output in (html, detail, pdf):
             self.assertIn('Recorded birth findings and final result', output)

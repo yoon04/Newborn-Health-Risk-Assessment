@@ -99,10 +99,17 @@ class MLResearchTests(unittest.TestCase):
             self.assertIn('ml-probability-ring', html)
             self.assertIn('ml-metrics', html)
             self.assertIn('Calibrated model', html)
+            self.assertIn('Area Under the Receiver Operating Characteristic Curve', html)
+            self.assertIn('Area Under the Precision-Recall Curve', html)
+            self.assertIn('Probability prediction error score', html)
             payload=application.build_report_payload(values,result)
-            pdf_text=' '.join(p.extract_text() for p in PdfReader(build_pdf_report(payload)).pages)
+            pdf_text=' '.join(' '.join(p.extract_text() for p in PdfReader(build_pdf_report(payload)).pages).split())
             self.assertIn('ML research estimate',pdf_text)
             self.assertIn('Research only',pdf_text)
+            self.assertIn('Area Under the Receiver',pdf_text)
+            self.assertIn('Operating Characteristic Curve',pdf_text)
+            self.assertIn('Area Under the Precision-Recall',pdf_text)
+            self.assertIn('Brier score',pdf_text)
 
     def test_saved_pdf_uses_original_estimate(self):
         form=valid_form(birth_plurality='singleton',birth_week='39')
