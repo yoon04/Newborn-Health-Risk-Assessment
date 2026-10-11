@@ -952,7 +952,18 @@ def generate_visualizations(
         indices = [item['risk_index'] for item in family_history_items]
         fig, ax = plt.subplots(figsize=(max(7, len(diseases) * 1.6), 4.5))
         xi = np.arange(len(diseases))
-        ax.bar(xi, indices, 0.5, label='Family-History Indicator', color='#6366f1', edgecolor='#4f46e5', alpha=0.9)
+        bar_colors = [
+            '#22c55e' if index < 30 else '#f59e0b' if index < 70 else '#ef4444'
+            for index in indices
+        ]
+        edge_colors = [
+            '#15803d' if index < 30 else '#b45309' if index < 70 else '#b91c1c'
+            for index in indices
+        ]
+        ax.bar(
+            xi, indices, 0.5, label='Family-History Indicator',
+            color=bar_colors, edgecolor=edge_colors, alpha=0.9,
+        )
         ax.set_title("Family-History Indicator", fontsize=12, fontweight='bold')
         ax.set_ylabel('Risk Index (0-100)', fontsize=10)
         ax.set_xticks(xi); ax.set_xticklabels(diseases, rotation=30, ha='right', fontsize=10)

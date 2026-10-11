@@ -6,7 +6,7 @@
   <title>Saved Assessment</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='site-nav.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='ml-research.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='ml-resea  rch.css') }}">
   <style>
     :root{--bg:#f6f3ee;--surface:#fff;--surface2:#f3efe8;--border:#e2d9cb;--accent:#0f766e;--green:#16a34a;--yellow:#d97706;--red:#dc2626;--text:#1f2937;--muted:#6b7280;--card:#fff;--shadow:0 18px 50px rgba(17,24,39,.08);--shadow-sm:0 8px 24px rgba(15,23,42,.08)}
     *{box-sizing:border-box;margin:0;padding:0}
@@ -52,6 +52,7 @@
 .birth-result-summary{margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}.birth-result-summary h3{font-size:14px;font-weight:600;margin-bottom:10px}.birth-followup-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:20px}.birth-followup-grid ul{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.birth-followup-grid li+li{margin-top:8px}@media(max-width:700px){.birth-followup-grid{grid-template-columns:1fr}}
 .birth-facts-list{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.birth-facts-list li+li{margin-top:6px}
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='assessment-sections.css') }}">
 </head>
 <body>
 {% set active_nav = 'history' %}{% include '_nav.html' %}
@@ -78,20 +79,17 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card birth-overview-card">
     <div class="section-title">Birth Summary{% if assessment.baby_name %} of {{ assessment.baby_name }}{% endif %}</div>
-    <div class="birth-grid">
-      <div class="b-item"><div class="b-lbl">Gestational Age</div><div class="b-val">{{ assessment.birth_week }} weeks</div></div>
-      <div class="b-item"><div class="b-lbl">Birth Weight</div><div class="b-val">{{ '%g'|format(assessment.birth_weight_input|float) }} {{ assessment.birth_weight_unit }} ({{ assessment.birth_weight_g }} g)</div></div>
-      <div class="b-item"><div class="b-lbl">Mother's Age</div><div class="b-val">{{ assessment.maternal_age }} years</div></div>
-      <div class="b-item"><div class="b-lbl">Child's Gender</div><div class="b-val">{{ assessment.child_gender|title }}</div></div>
-      <div class="b-item"><div class="b-lbl">Delivery Method</div><div class="b-val">{{ {'vaginal':'Vaginal Delivery','assisted':'Assisted Delivery','cesarean':'Cesarean Section'}.get(assessment.delivery_type, assessment.delivery_type|title) }}</div></div>
-      <div class="b-item"><div class="b-lbl">Delivery Complication</div><div class="b-val">{{ 'Yes' if assessment.delivery_complication else 'No' }}</div></div>
-      {% if assessment.family_disease_name %}
-      <div class="b-item"><div class="b-lbl">Known Family Disease</div><div class="b-val">{{ assessment.family_disease_name }}</div></div>
-      <div class="b-item"><div class="b-lbl">Who Has It</div><div class="b-val">{{ assessment.family_affected_relative|replace('_',' ')|title if assessment.family_affected_relative else '-' }}</div></div>
-      {% endif %}
+    <div class="birth-grid birth-overview-grid">
+      <div class="b-item birth-item--teal"><div class="b-lbl">Gestational Age</div><div class="b-val">{{ assessment.birth_week }} weeks</div></div>
+      <div class="b-item birth-item--blue"><div class="b-lbl">Birth Weight</div><div class="b-val">{{ '%g'|format(assessment.birth_weight_input|float) }} {{ assessment.birth_weight_unit }} ({{ assessment.birth_weight_g }} g)</div></div>
+      <div class="b-item birth-item--violet"><div class="b-lbl">Mother's Age</div><div class="b-val">{{ assessment.maternal_age }} years</div></div>
+      <div class="b-item birth-item--rose"><div class="b-lbl">Child's Gender</div><div class="b-val">{{ assessment.child_gender|title }}</div></div>
+      <div class="b-item birth-item--amber"><div class="b-lbl">Delivery Method</div><div class="b-val">{{ {'vaginal':'Vaginal Delivery','assisted':'Assisted Delivery','cesarean':'Cesarean Section'}.get(assessment.delivery_type, assessment.delivery_type|title) }}</div></div>
+      <div class="b-item {% if assessment.delivery_complication %}birth-item--red{% else %}birth-item--green{% endif %}"><div class="b-lbl">Delivery Complication</div><div class="b-val">{% if assessment.delivery_complication %}Yes{% if snapshot.get('delivery_complication_types') %} — {{ snapshot.delivery_complication_types|join('; ') }}{% endif %}{% else %}No{% endif %}</div></div>
     </div>
+    {% if assessment.delivery_complication %}<p class="birth-remark"><strong>Remark:</strong> Selected complication types provide clinical context. The calculation uses only whether any complication was reported.</p>{% endif %}
   </div>
 
   {% for title, index, level, graph_key, graph_alt in [
@@ -108,7 +106,22 @@
       </div>
       {% if plots and plots[graph_key] %}<div class="risk-chart"><img src="/{{ plots[graph_key] }}" alt="{{ graph_alt }}"><p class="graph-caption">Graph interpretation: curves show fuzzy rule activation; the vertical line marks the {{ '%.1f'|format(index) }}/100 index. This index is not a probability.</p></div>{% endif %}
     </div>
-    {% if loop.first and snapshot.immediate_observation_summary %}{% with results=snapshot %}{% include '_immediate_summary.html' %}{% endwith %}{% elif graph_key == 'birth' %}{% with results=snapshot %}{% include '_birth_summary.html' %}{% endwith %}{% endif %}
+    {% if loop.first and snapshot.immediate_observation_summary %}
+      {% with results=snapshot %}{% include '_immediate_summary.html' %}{% endwith %}
+    {% elif graph_key == 'birth' %}
+      {% with results=snapshot %}{% include '_birth_summary.html' %}{% endwith %}
+    {% elif graph_key == 'family' and (snapshot.get('family_history_items') or assessment.family_disease_name) %}
+    <div class="family-history-details">
+      <h3>Reported family-history details</h3>
+      {% if snapshot.get('family_history_items') %}
+        {% for item in snapshot.family_history_items %}
+        <div class="genetic-item"><div class="genetic-name">{{ item.disease }}</div><div class="genetic-lines"><div class="genetic-line"><div class="genetic-key">Who has it</div><div class="genetic-val">{{ item.affected_relative }}</div></div><div class="genetic-line"><div class="genetic-key">Indicator</div><div class="genetic-val"><strong>{{ '%.1f'|format(item.risk_index) }} / 100</strong></div></div></div></div>
+        {% endfor %}
+      {% else %}
+        <div class="genetic-item"><div class="genetic-name">{{ assessment.family_disease_name }}</div><div class="genetic-lines"><div class="genetic-line"><div class="genetic-key">Who has it</div><div class="genetic-val">{{ assessment.family_affected_relative|replace('_',' ')|title if assessment.family_affected_relative else '-' }}</div></div><div class="genetic-line"><div class="genetic-key">Indicator</div><div class="genetic-val"><strong>{{ '%.1f'|format(assessment.family_history_risk_index|float) }} / 100</strong></div></div></div></div>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
   {% endfor %}
 

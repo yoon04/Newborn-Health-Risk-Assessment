@@ -1,15 +1,16 @@
 {% if results.get('birth_monitoring') %}
 {% set birth = results.birth_monitoring %}
 <div class="birth-result-summary">
-  <section><h3>Recorded birth findings and final result</h3>
-    <ul class="birth-facts-list">{% if birth.get('finding_facts') %}{% for fact in birth.finding_facts %}<li>{{ fact }}</li>{% endfor %}{% else %}{% for finding in birth.inputs %}<li>{{ finding.name }}: {{ finding.value }} — {{ finding.category }}.</li>{% endfor %}<li>{{ birth.final_result }}</li>{% endif %}</ul>
-    <h4 class="birth-reason-title">Reason for this result</h4>
-    <ul class="birth-facts-list">{% for fact in birth.get('reason_facts', [birth.get('result_reason', birth.explanation)]) %}<li>{{ fact }}</li>{% endfor %}</ul>
-  </section>
-  <div class="birth-followup-grid">
-  <section><h3>Monitoring concerns</h3><ul>{% for concern in birth.concerns %}<li>{{ concern }}</li>{% endfor %}</ul></section>
-  <section><h3>Recommended monitoring actions</h3><ul>{% for action in birth.actions %}<li>{{ action }}</li>{% endfor %}</ul></section>
+  <div class="birth-insight-grid">
+    <section class="birth-insight-panel birth-insight-panel--findings"><h3>Recorded birth findings and final result</h3>
+      <ul>{% if birth.get('finding_facts') %}{% for fact in birth.finding_facts %}<li>{{ fact }}</li>{% endfor %}{% else %}{% for finding in birth.inputs %}<li>{{ finding.name }}: {{ finding.value }} — {{ finding.category }}.</li>{% endfor %}<li>{{ birth.final_result }}</li>{% endif %}</ul>
+    </section>
+    <section class="birth-insight-panel birth-insight-panel--reason"><h3>Reason for this result</h3>
+      <ul>{% for fact in birth.get('reason_facts', [birth.get('result_reason', birth.explanation)]) %}<li>{{ fact }}</li>{% endfor %}</ul>
+    </section>
+    <section class="birth-insight-panel birth-insight-panel--concerns"><h3>Monitoring concerns</h3><ul>{% for concern in birth.concerns %}<li>{{ concern }}</li>{% endfor %}</ul></section>
   </div>
+  <section class="monitoring-action-panel"><h3>Recommended monitoring actions</h3><ul>{% for action in birth.actions %}<li>{{ action }}</li>{% endfor %}</ul></section>
 </div>
 <details style="margin-top:18px"><summary style="font-size:13px;cursor:pointer">How the birth monitoring index was calculated</summary>
   <p class="observation-footnote">{{ birth.explanation }}</p>

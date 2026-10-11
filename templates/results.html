@@ -37,6 +37,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .birth-result-summary{margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}.birth-result-summary h3{font-size:14px;font-weight:600;margin-bottom:10px}.birth-followup-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:20px}.birth-followup-grid ul{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.birth-followup-grid li+li{margin-top:8px}@media(max-width:700px){.birth-followup-grid{grid-template-columns:1fr}}
 .birth-facts-list{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.birth-facts-list li+li{margin-top:6px}
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='assessment-sections.css') }}">
 </head>
 <body>
 {% set active_nav = 'assess' %}{% include '_nav.html' %}
@@ -74,16 +75,17 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
   </div>
 
 {% endif %}
-  <div class="score-card">
+  <div class="score-card birth-overview-card">
     <div class="section-title">Birth Summary{% if results.baby_name %} of {{ results.baby_name }}{% endif %}</div>
-    <div class="birth-grid">
-      <div class="birth-item"><div class="birth-item-lbl">Gestational Age</div><div class="birth-item-val">{{ results.birth_week }} weeks</div></div>
-      <div class="birth-item"><div class="birth-item-lbl">Birth Weight</div><div class="birth-item-val">{{ results.get('weight_display', results.birth_weight_g|round|int ~ 'g') }}</div></div>
-      <div class="birth-item"><div class="birth-item-lbl">Mother's Age</div><div class="birth-item-val">{{ results.maternal_age }} years</div></div>
-      <div class="birth-item"><div class="birth-item-lbl">Child's Gender</div><div class="birth-item-val">{{ results.child_gender|title }}</div></div>
-      <div class="birth-item"><div class="birth-item-lbl">Delivery Method</div><div class="birth-item-val">{{ results.delivery_type }}</div></div>
-      <div class="birth-item"><div class="birth-item-lbl">Delivery Complication</div><div class="birth-item-val">{{ results.delivery_complication }}</div></div>
+    <div class="birth-grid birth-overview-grid">
+      <div class="birth-item birth-item--teal"><div class="birth-item-lbl">Gestational Age</div><div class="birth-item-val">{{ results.birth_week }} weeks</div></div>
+      <div class="birth-item birth-item--blue"><div class="birth-item-lbl">Birth Weight</div><div class="birth-item-val">{{ results.get('weight_display', results.birth_weight_g|round|int ~ 'g') }}</div></div>
+      <div class="birth-item birth-item--violet"><div class="birth-item-lbl">Mother's Age</div><div class="birth-item-val">{{ results.maternal_age }} years</div></div>
+      <div class="birth-item birth-item--rose"><div class="birth-item-lbl">Child's Gender</div><div class="birth-item-val">{{ results.child_gender|title }}</div></div>
+      <div class="birth-item birth-item--amber"><div class="birth-item-lbl">Delivery Method</div><div class="birth-item-val">{{ results.delivery_type }}</div></div>
+      <div class="birth-item {% if results.delivery_complication == 'Yes' %}birth-item--red{% else %}birth-item--green{% endif %}"><div class="birth-item-lbl">Delivery Complication</div><div class="birth-item-val">{{ results.get('delivery_complication_display', results.delivery_complication) }}</div></div>
     </div>
+    {% if results.delivery_complication == 'Yes' %}<p class="birth-remark"><strong>Remark:</strong> Selected complication types provide clinical context. The calculation uses only whether any complication was reported; individual types do not receive separate numerical weights.</p>{% endif %}
   </div>
 
   {% for title, index, level, label, description, graph_key, graph_alt in [
@@ -105,23 +107,21 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
     {% include '_immediate_summary.html' %}
     {% elif graph_key == 'birth' %}
     {% include '_birth_summary.html' %}
+    {% elif graph_key == 'family' and results.family_history_items %}
+    <div class="family-history-details">
+      <h3>Reported family-history details</h3>
+      {% for item in results.family_history_items %}
+      <div class="genetic-item"><div class="genetic-name">{{ item.disease }}</div><div class="genetic-lines"><div class="genetic-line"><div class="genetic-key">Who has it</div><div class="genetic-val">{{ item.affected_relative }}</div></div><div class="genetic-line"><div class="genetic-key">Indicator</div><div class="genetic-val"><strong>{{ '%.1f'|format(item.risk_index) }} / 100</strong></div></div></div></div>
+      {% endfor %}
+    </div>
     {% endif %}
   </div>
   {% endfor %}
 
   {% include '_ml_research.html' %}
 
-  {% if results.family_history_items %}
-  <div class="genetic-card">
-    <div class="section-title">Family-History Details</div>
-    {% for item in results.family_history_items %}
-    <div class="genetic-item"><div class="genetic-name">{{ item.disease }}</div><div class="genetic-lines"><div class="genetic-line"><div class="genetic-key">Who has it</div><div class="genetic-val">{{ item.affected_relative }}</div></div><div class="genetic-line"><div class="genetic-key">Indicator</div><div class="genetic-val"><strong>{{ '%.1f'|format(item.risk_index) }} / 100</strong></div></div></div></div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <details class="charts-card"><summary>View input membership graphs</summary>
-    <div class="section-title">Birth Chart Summary</div>
+    <!-- <div class="section-title">Birth Chart Summary</div> -->
     <div class="charts-grid">
       <div class="chart-item"><h4>Baby's APGAR Score</h4><img src="{{ results.plot_paths.apgar }}" alt="APGAR fuzzy"></div>
       <div class="chart-item"><h4>Gestational Age</h4><img src="{{ results.plot_paths.week }}" alt="Gestational age fuzzy"></div>

@@ -174,6 +174,11 @@ class BirthMonitoringExplanationTests(unittest.TestCase):
             self.assertIn('Recommended monitoring actions', output)
             self.assertIn('0.25', output)
             self.assertIn('clinical review', output)
+        for page in (html, detail):
+            self.assertIn('birth-insight-grid', page)
+            self.assertEqual(page.count('birth-insight-panel '), 6)
+            self.assertIn('monitoring-action-panel', page)
+            self.assertIn('immediate-action-panel', page)
 
 
 if __name__ == '__main__':

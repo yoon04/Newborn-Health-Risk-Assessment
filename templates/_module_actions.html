@@ -1,1 +1,18 @@
-{% if actions %}<div class="score-card card"><h2>Recommended actions by module</h2><p>Actions come from recorded findings and project rules and require clinician review. The ML research estimate does not change these actions. No combined overall risk score is calculated.</p>{% for item in actions %}<div style="padding:12px 0;border-bottom:1px solid #e2d9cb"><h3>{{ item.module }} · {{ item.level }}</h3><p><strong>{{ item.priority }}</strong></p><p>{{ item.action }}</p></div>{% endfor %}</div>{% endif %}
+{% if actions %}
+<div class="score-card card module-actions-card">
+  <header class="module-actions-header">
+    <h2 class="module-actions-title">Recommended actions by module</h2>
+    <p class="module-actions-intro">Actions come from recorded findings and project rules and require clinician review. The ML research estimate does not change these actions. No combined overall risk score is calculated.</p>
+  </header>
+  <div class="module-actions-grid">
+    {% for item in actions %}
+    <article class="module-action module-action--{{ item.level|lower }}">
+      <div class="module-action-label">Module {{ loop.index }}</div>
+      <h3>{{ item.module }} · {{ item.level }}</h3>
+      <p class="module-action-priority">{{ item.priority }}</p>
+      <p class="module-action-text">{{ item.action }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
