@@ -13,6 +13,8 @@ Use the existing project virtual environment:
 
 Restart an already running Flask process after dependency installation. Open http://127.0.0.1:5000/ and choose New Assessment. No Colab connection or training is needed for inference.
 
+If the panel reports that the research model is unavailable, check the Flask console traceback. `Model artifact checksum mismatch` can occur when Windows Git converts the frozen JSON artifacts from LF to CRLF; `.gitattributes` disables text conversion for the artifact directory. Restore the original export bytes that match the manifest rather than regenerating checksums or disabling verification. Missing packages or dependency version mismatches require installing `requirements-ml.txt` in the same environment used to run Flask. Restart Flask and create a new assessment: saved assessments retain their original unavailable result.
+
 ## Inputs and limits
 
 Birth plurality defaults to Unknown. Confirm Singleton to enable the research estimate. Multiple or unknown births produce Estimate unavailable. Bounds: recorded gestation 20–45 weeks, weight 227–5999 g, maternal age 13–49 whole years. Gestation is encoded for ML in completed weeks (floor): 38.5 becomes 38, not 39. The original clinical observation and fuzzy input remain unchanged. The UI and PDF disclose the recorded and encoded values. This matches CDC obstetric-estimate reporting: https://www.cdc.gov/nchs/nvss/facility-worksheets-guide/30.htm . This input-format correction does not retrain or clinically validate the model. Age 12 and 50 represent grouped/top-coded CDC ages and are excluded.

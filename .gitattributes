@@ -1,0 +1,2 @@
+# Frozen artifacts are verified byte-for-byte against manifest.json.
+/research_models/nicu_v2/* -text

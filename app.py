@@ -580,40 +580,42 @@ def download_report():
 
 @app.get('/assessments')
 def assessment_history():
-    selected_baby = (request.args.get('baby') or '').strip()
+    search = (request.args.get('q') or '').strip()
+    selected_date = (request.args.get('date') or '').strip()
+    filter_error = ''
+    parsed_date = None
+    if selected_date:
+        try:
+            parsed_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except ValueError:
+            filter_error = 'Enter a valid assessment date.'
+            selected_date = ''
     try:
         query = (
             Assessment.query
         )
-        if selected_baby:
-            query = query.filter(Assessment.baby_name == selected_baby)
+        if search:
+            query = query.filter(func.lower(Assessment.baby_name).contains(search.lower(), autoescape=True))
+        if parsed_date:
+            query = query.filter(func.date(Assessment.created_at) == parsed_date)
         assessments = query.order_by(Assessment.created_at.desc()).limit(100).all()
-        baby_names = [
-            row[0]
-            for row in (
-                db.session.query(Assessment.baby_name)
-                .filter(
-                    Assessment.baby_name.isnot(None),
-                )
-                .distinct()
-                .order_by(Assessment.baby_name.asc())
-                .all()
-            )
-        ]
     except SQLAlchemyError:
+        app.logger.exception('Unable to load assessment history')
         db.session.rollback()
         return render_template(
             'assessments.html',
             assessments=[],
-            baby_names=[],
-            selected_baby='',
-            storage_error='Assessment history is unavailable until the database is configured and migrated.',
+            search=search,
+            selected_date=selected_date,
+            filter_error=filter_error,
+            storage_error='Unable to load assessment history. Check the application log for the database error.',
         ), 503
     return render_template(
         'assessments.html',
         assessments=assessments,
-        baby_names=baby_names,
-        selected_baby=selected_baby,
+        search=search,
+        selected_date=selected_date,
+        filter_error=filter_error,
         storage_error='',
     )
 

@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from unittest.mock import patch
 
 from werkzeug.datastructures import MultiDict
@@ -287,25 +288,51 @@ class RouteValidationTests(unittest.TestCase):
         self.assertIn(b'Shared History', response.data)
         self.assertIn(b'Emma', response.data)
 
-    def test_history_can_be_filtered_by_baby_name(self):
+    def test_history_can_be_searched_by_partial_child_name_and_date(self):
         with application.app.app_context():
             user = User.query.filter_by(email='route-test@example.com').one()
             values, raw_form = valid_values()
             record = build_assessment_record(values, sample_results(), raw_form, user.id)
+            record.created_at = datetime(2026, 10, 10, 23, 59, 59)
             db.session.add(record)
+            for name, timestamp in [('Emma Rose', datetime(2026, 10, 11)), ('Olivia', datetime(2026, 10, 10, 12))]:
+                other = build_assessment_record(values, sample_results(), raw_form, user.id)
+                other.baby_name = name
+                other.created_at = timestamp
+                db.session.add(other)
             db.session.commit()
 
         all_history = self.client.get('/assessments')
         self.assertEqual(all_history.status_code, 200)
         self.assertIn(b'Emma', all_history.data)
+        self.assertIn(b'type="search"', all_history.data)
+        self.assertNotIn(b'id="baby-filter"', all_history.data)
 
-        filtered = self.client.get('/assessments?baby=Emma')
+        filtered = self.client.get('/assessments?q=eMm')
         self.assertEqual(filtered.status_code, 200)
         self.assertIn(b'Legacy combined result', filtered.data)
+        self.assertIn(b'Emma Rose', filtered.data)
+        self.assertNotIn(b'<td>Olivia</td>', filtered.data)
 
-        other_baby = self.client.get('/assessments?baby=Nobody')
+        other_baby = self.client.get('/assessments?q=Nobody')
         self.assertEqual(other_baby.status_code, 200)
-        self.assertNotIn(b'47.8 / 100', other_baby.data)
+        self.assertIn(b'No assessments match', other_baby.data)
+        self.assertNotIn(b'<td>Emma</td>', other_baby.data)
+
+        dated = self.client.get('/assessments?date=2026-10-10')
+        self.assertIn(b'<td>Emma</td>', dated.data)
+        self.assertIn(b'<td>Olivia</td>', dated.data)
+        self.assertNotIn(b'<td>Emma Rose</td>', dated.data)
+        combined = self.client.get('/assessments?date=2026-10-10&q=emm')
+        self.assertIn(b'<td>Emma</td>', combined.data)
+        self.assertNotIn(b'<td>Olivia</td>', combined.data)
+        self.assertNotIn(b'<td>Emma Rose</td>', combined.data)
+
+        literal = self.client.get('/assessments?q=%25')
+        self.assertIn(b'No assessments match', literal.data)
+        invalid = self.client.get('/assessments?date=invalid')
+        self.assertEqual(invalid.status_code, 200)
+        self.assertIn(b'Enter a valid assessment date.', invalid.data)
 
     def test_form_uses_only_simple_family_history_questions(self):
         response = self.client.get('/')

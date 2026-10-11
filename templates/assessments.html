@@ -21,8 +21,10 @@
     .notice{background:#fff7ed;border:1px solid #fed7aa;padding:12px;border-radius:10px;color:#c2410c;font-size:13px}
     .filter-bar{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
     .filter-label{font-size:12.5px;font-weight:600;color:#475569}
-    .filter select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-family:inherit;font-size:13px;cursor:pointer}
-    .filter select:focus{outline:none;border-color:var(--accent)}
+    .filter-bar input,.filter-bar button{padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);font-family:inherit;font-size:13px}
+    .filter-bar input:focus{outline:2px solid var(--accent);outline-offset:2px}
+    .filter-bar input[type=search]{flex:1;min-width:180px}
+    .filter-bar button{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;cursor:pointer}
     @media(max-width:600px){table{font-size:13px}th,td{padding:9px}}
   </style>
 </head>
@@ -32,21 +34,15 @@
 <main>
 <section class="card">
   {% if storage_error %}<div class="notice">{{ storage_error }}</div>{% endif %}
-  {% if baby_names %}
-  <div class="filter-bar">
-    <span class="filter-label">Show results for:</span>
-    <form method="GET" action="{{ url_for('assessment_history') }}">
-      <select id="baby-filter" name="baby" onchange="this.form.submit()">
-        <option value="" {% if not selected_baby %}selected{% endif %}>All babies</option>
-        {% for baby in baby_names %}
-        <option value="{{ baby }}" {% if selected_baby == baby %}selected{% endif %}>{{ baby }}</option>
-        {% endfor %}
-      </select>
-      <noscript><button type="submit">Filter</button></noscript>
-    </form>
-    {% if selected_baby %}<a href="{{ url_for('assessment_history') }}">Clear filter</a>{% endif %}
-  </div>
-  {% endif %}
+  {% if filter_error %}<div class="notice" role="alert">{{ filter_error }}</div>{% endif %}
+  <form class="filter-bar" method="GET" action="{{ url_for('assessment_history') }}">
+    <label class="filter-label" for="history-date">Filter by date:</label>
+    <input type="date" id="history-date" name="date" value="{{ selected_date }}">
+    <label class="filter-label" for="history-search">Child's name:</label>
+    <input type="search" id="history-search" name="q" value="{{ search }}" placeholder="Search by child's name">
+    <button type="submit">Search</button>
+    {% if search or selected_date %}<a href="{{ url_for('assessment_history') }}">Clear filters</a>{% endif %}
+  </form>
   {% if assessments %}
   <table>
     <thead><tr><th>Date</th><th>Baby</th><th>APGAR</th><th>Immediate action</th><th>Result Version</th><th>Immediate rule clarity (heuristic)</th><th></th></tr></thead>
@@ -65,7 +61,7 @@
     </tbody>
   </table>
   {% elif not storage_error %}
-    <div class="empty">{% if selected_baby %}No saved assessments for {{ selected_baby }} yet.{% else %}No saved assessments yet.{% endif %}</div>
+    <div class="empty">{% if search or selected_date %}No assessments match your search or date filter.{% else %}No saved assessments yet.{% endif %}</div>
   {% endif %}
   <!-- <div class="actions"><a href="{{ url_for('index') }}">New assessment</a></div> -->
 </section>
