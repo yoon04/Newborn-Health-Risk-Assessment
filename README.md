@@ -18,7 +18,7 @@ Important: This tool is educational only and is not a medical diagnosis.
 - APGAR score breakdown with per-component meaning
 - Fuzzy logic inference for birth-factor risk
 - Simple family-history input: Yes, No, or Unknown
-- If a disease is known: disease name and who has it
+- If one or more diseases are known: add each disease and who has it
 - Family-history fuzzy indicator without an invented disease-specific probability
 - User registration and login with Flask-Login sessions
 - Private assessment history for each signed-in user
@@ -217,8 +217,9 @@ The application does not call `db.create_all()` and does not delete or recreate 
 
 ### Family-history inputs
 - Is there a known family disease? Yes, No, or Unknown
-- If Yes: select from 20 common family-history diseases and conditions, or choose **Other disease / not listed**
-- If Yes: who has it - Father, Mother, Both parents, Other family member, or Unknown
+- If Yes: add one or more conditions from 20 common family-history diseases, or choose **Other disease / not listed**
+- For each condition: select Father, Mother, Both parents, Other family member, or Unknown
+- Multiple disease names are documented; the indicator uses the strongest reported relationship pattern rather than multiplying the score by the number of conditions
 
 The user is not asked for inheritance mode, genotype, carrier status, chromosome type, or other technical genetic information.
 

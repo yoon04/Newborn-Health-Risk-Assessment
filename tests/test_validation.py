@@ -47,7 +47,7 @@ class SubmissionValidationTests(unittest.TestCase):
         self.assertEqual(values['delivery_comp'], 0)
         self.assertEqual(values['delivery_complication_types'], [])
         self.assertEqual(values['family_history'], {
-            'status': 'no', 'disease': '', 'affected_relative': ''
+            'status': 'no', 'disease': '', 'affected_relative': '', 'items': []
         })
 
     def test_reported_complication_requires_and_normalizes_types(self):
@@ -135,9 +135,36 @@ class SubmissionValidationTests(unittest.TestCase):
         values, errors, rows = application.validate_submission(form)
 
         self.assertEqual(errors, {})
-        self.assertEqual(rows, [])
+        self.assertEqual(rows, [{
+            'disease_code': 'muscular_dystrophy',
+            'affected_relative': 'mother',
+        }])
         self.assertEqual(values['family_history']['disease'], 'Muscular dystrophy')
         self.assertEqual(values['family_history']['affected_relative'], 'mother')
+
+    def test_multiple_family_diseases_are_normalized_in_order(self):
+        form = valid_form(family_history_status='yes')
+        form.setlist('family_disease', ['asthma', 'cystic_fibrosis'])
+        form.setlist('affected_relative', ['father', 'both_parents'])
+
+        values, errors, rows = application.validate_submission(form)
+
+        self.assertEqual(errors, {})
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(values['family_history']['items'], [
+            {'disease': 'Asthma', 'disease_code': 'asthma', 'affected_relative': 'father'},
+            {'disease': 'Cystic fibrosis', 'disease_code': 'cystic_fibrosis', 'affected_relative': 'both_parents'},
+        ])
+
+    def test_multiple_family_disease_rows_must_be_complete(self):
+        form = valid_form(family_history_status='yes')
+        form.setlist('family_disease', ['asthma', ''])
+        form.setlist('affected_relative', ['father', 'mother'])
+
+        _values, errors, rows = application.validate_submission(form)
+
+        self.assertIn('family_disease', errors)
+        self.assertEqual(len(rows), 2)
 
     def test_incomplete_or_altered_family_values_are_rejected(self):
         cases = (
@@ -287,8 +314,11 @@ class RouteValidationTests(unittest.TestCase):
         self.assertIn(b'name="family_history_status"', response.data)
         self.assertIn(b'name="family_disease"', response.data)
         self.assertIn(b'name="affected_relative"', response.data)
-        self.assertIn(b'<select id="family_disease"', response.data)
+        self.assertIn(b'<select id="family_disease_0"', response.data)
         self.assertNotIn(b'<input type="text" id="family_disease"', response.data)
+        self.assertIn(b'id="addFamilyDisease"', response.data)
+        self.assertIn(b'+ Add another disease', response.data)
+        self.assertIn(b'family-history-card', response.data)
         self.assertEqual(len(application.FAMILY_DISEASE_OPTIONS), 20)
         for value, label in application.FAMILY_DISEASE_OPTIONS:
             self.assertIn(f'value="{value}"'.encode(), response.data)
@@ -363,6 +393,24 @@ class RouteValidationTests(unittest.TestCase):
         self.assertIn(b'module-action-priority', response.data)
         self.assertIn(b'Important Triggered Fuzzy Rules', response.data)
         self.assertIn(b'Family disease history is unknown', response.data)
+
+    @patch('fuzzy_logic.generate_visualizations', return_value=(45.0, {
+        'apgar': '', 'week': '', 'weight': '', 'age': '', 'genetic': '',
+        'immediate': '', 'birth': '', 'family': '', 'final': '',
+    }))
+    def test_multiple_family_diseases_reach_results_and_storage(self, _plots):
+        form = valid_form(family_history_status='yes')
+        form.setlist('family_disease', ['asthma', 'cystic_fibrosis'])
+        form.setlist('affected_relative', ['father', 'both_parents'])
+
+        response = self.client.post('/', data=form)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Asthma', response.data)
+        self.assertIn(b'Cystic fibrosis', response.data)
+        with application.app.app_context():
+            stored = Assessment.query.order_by(Assessment.id.desc()).first()
+            self.assertEqual(len(stored.result_snapshot['family_history_items']), 2)
 
     @patch('fuzzy_logic.generate_visualizations')
     def test_timed_submission_persists_and_replays_all_observations(self, plots):

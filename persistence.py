@@ -36,6 +36,12 @@ def _raw_input_snapshot(raw_form):
         [str(value) for value in selected] if isinstance(selected, (list, tuple))
         else ([str(selected)] if selected else [])
     )
+    for field in ('family_disease', 'affected_relative'):
+        selected = raw_form.get(field, [])
+        snapshot[field] = (
+            [str(value) for value in selected] if isinstance(selected, (list, tuple))
+            else ([str(selected)] if selected else [])
+        )
     return snapshot
 
 

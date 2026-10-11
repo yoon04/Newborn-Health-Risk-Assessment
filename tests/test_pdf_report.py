@@ -46,6 +46,11 @@ def sample_report():
                 'affected_relative': 'Other family member',
                 'risk_index': 45.0,
             },
+            {
+                'disease': 'Cystic fibrosis',
+                'affected_relative': 'Mother',
+                'risk_index': 50.0,
+            },
         ],
         'overall_risk_index': 65.4,
         'risk_level': 'Moderate',
@@ -133,6 +138,8 @@ class PdfReportTests(unittest.TestCase):
         self.assertIn('Immediate Condition Risk', text)
         self.assertIn('Birth-Related Risk', text)
         self.assertIn('Family-History Risk', text)
+        self.assertIn('Congenital Deafness', text)
+        self.assertIn('Cystic fibrosis', text)
         self.assertIn('Birth Chart Summary', text)
         self.assertIn('Overall Assessment Result', text)
         self.assertIn('Rule clarity basis (heuristic)', text)

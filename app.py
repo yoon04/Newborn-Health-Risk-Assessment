@@ -117,6 +117,7 @@ FAMILY_DISEASE_LABELS = dict((*FAMILY_DISEASE_OPTIONS, OTHER_FAMILY_DISEASE))
 MAX_USER_NAME_LENGTH = 120
 MAX_USER_EMAIL_LENGTH = 320
 MAX_BABY_NAME_LENGTH = 80
+MAX_FAMILY_DISEASES = 10
 USER_EMAIL_PATTERN = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 MIN_PASSWORD_LENGTH = 8
 MIN_BIRTH_WEIGHT_G = 100
@@ -254,23 +255,54 @@ def validate_submission(form):
         ]
 
     family_status = (form.get('family_history_status') or '').strip().lower()
-    disease_choice = (form.get('family_disease') or '').strip().lower()
-    affected_relative = (form.get('affected_relative') or '').strip().lower()
+    disease_choices = [
+        str(value or '').strip().lower()
+        for value in (form.getlist('family_disease') if hasattr(form, 'getlist') else [form.get('family_disease')])
+    ]
+    affected_relatives = [
+        str(value or '').strip().lower()
+        for value in (form.getlist('affected_relative') if hasattr(form, 'getlist') else [form.get('affected_relative')])
+    ]
+    row_count = max(len(disease_choices), len(affected_relatives), 1)
+    family_rows = [
+        {
+            'disease_code': disease_choices[index] if index < len(disease_choices) else '',
+            'affected_relative': affected_relatives[index] if index < len(affected_relatives) else '',
+        }
+        for index in range(row_count)
+    ]
+    normalized_family_items = []
 
     if family_status not in FAMILY_HISTORY_STATUSES:
         errors['family_history_status'] = 'Select Yes, No, or Unknown for family disease history.'
     elif family_status == 'yes':
-        if disease_choice not in FAMILY_DISEASE_LABELS:
-            errors['family_disease'] = 'Select a disease or choose Other disease / not listed.'
-        if affected_relative not in AFFECTED_RELATIVES:
-            errors['affected_relative'] = 'Select who has the disease.'
+        if row_count > MAX_FAMILY_DISEASES:
+            errors['family_disease'] = f'Add no more than {MAX_FAMILY_DISEASES} family diseases.'
+        if len(disease_choices) != len(affected_relatives):
+            errors['family_disease'] = 'Complete both fields for every reported disease.'
+            errors['affected_relative'] = 'Complete both fields for every reported disease.'
+        for row in family_rows[:MAX_FAMILY_DISEASES]:
+            if row['disease_code'] not in FAMILY_DISEASE_LABELS:
+                errors['family_disease'] = 'Select a disease for every reported condition.'
+            if row['affected_relative'] not in AFFECTED_RELATIVES:
+                errors['affected_relative'] = 'Select who has each reported disease.'
+            if (row['disease_code'] in FAMILY_DISEASE_LABELS
+                    and row['affected_relative'] in AFFECTED_RELATIVES):
+                normalized_family_items.append({
+                    'disease': FAMILY_DISEASE_LABELS[row['disease_code']],
+                    'disease_code': row['disease_code'],
+                    'affected_relative': row['affected_relative'],
+                })
+
+    primary_family_item = normalized_family_items[0] if normalized_family_items else {}
 
     values['family_history'] = {
         'status': family_status if family_status in FAMILY_HISTORY_STATUSES else '',
-        'disease': FAMILY_DISEASE_LABELS.get(disease_choice, '') if family_status == 'yes' else '',
-        'affected_relative': affected_relative if family_status == 'yes' and affected_relative in AFFECTED_RELATIVES else '',
+        'disease': primary_family_item.get('disease', '') if family_status == 'yes' else '',
+        'affected_relative': primary_family_item.get('affected_relative', '') if family_status == 'yes' else '',
+        'items': normalized_family_items if family_status == 'yes' else [],
     }
-    return values, errors, []
+    return values, errors, family_rows if family_status == 'yes' else []
 
 
 def validate_registration(form):
@@ -322,6 +354,7 @@ def render_assessment_form(errors=None, form_data=None, family_rows=None,
         errors=errors or {},
         form_data=form_data or {},
         family_rows=family_rows or [],
+        max_family_diseases=MAX_FAMILY_DISEASES,
         display_weight_unit=display_weight_unit,
         family_disease_options=FAMILY_DISEASE_OPTIONS,
         other_family_disease=OTHER_FAMILY_DISEASE,
@@ -497,6 +530,8 @@ def index():
                 raw_submission['delivery_complication_types'] = request.form.getlist(
                     'delivery_complication_types'
                 )
+                raw_submission['family_disease'] = request.form.getlist('family_disease')
+                raw_submission['affected_relative'] = request.form.getlist('affected_relative')
                 stored_assessment = save_assessment(
                     values,
                     results,
@@ -609,6 +644,10 @@ def _replay_assessment(assessment):
             'status': assessment.family_history_status,
             'disease': assessment.family_disease_name or '',
             'affected_relative': assessment.family_affected_relative or '',
+            'items': (
+                ((assessment.result_snapshot or {}).get('family_history') or {}).get('items')
+                or []
+            ),
         },
     }
     values['apgar_observations'] = (assessment.result_snapshot or {}).get('apgar_timeline') or None

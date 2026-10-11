@@ -174,6 +174,37 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .birth-info-card .complication-choice{border-color:#ead5d5;background:#fff}
 .birth-info-card .complication-choice:hover{border-color:#f87171;background:#fffafa}
 .birth-info-card .complication-choice:has(input:checked){border-color:#dc2626;background:#fef2f2;color:#991b1b;font-weight:600}
+.family-history-card{--family-accent:#d97706;--family-dark:#854d0e;--family-soft:#fffbeb;--family-border:#f0d28a;border-color:var(--family-border);border-top:4px solid var(--family-accent)}
+.family-history-card .card-hd{background:linear-gradient(135deg,#fff8dc 0%,#fffdf4 100%);border-bottom-color:var(--family-border)}
+.family-history-card .card-icon{background:#fef3c7;color:var(--family-dark);border:1px solid var(--family-border)}
+.family-question-panel{padding:18px;border:1px solid #f0d9a0;border-radius:14px;background:linear-gradient(145deg,#fff 0%,#fffaf0 100%)}
+.family-history-card .fl{color:#3f3a31;font-size:13px;font-weight:700}
+.family-history-card #family-status-cards .del-card{position:relative;min-height:96px;border-color:#ead9b4;box-shadow:none}
+.family-history-card #family-status-cards .del-card:hover{border-color:#d6a84c;background:#fffaf0;transform:translateY(-1px)}
+.family-history-card #family-status-cards .del-card.sel{border-color:#d97706;background:#fffbeb;box-shadow:0 0 0 2px rgba(217,119,6,.1)}
+.family-history-card #family-status-cards .del-card.sel::after{content:'Selected';position:absolute;top:9px;right:9px;padding:3px 7px;border-radius:999px;background:#d97706;color:#fff;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.family-history-card #family-status-cards .del-card:nth-child(2).sel{border-color:#16a34a;background:#f0fdf4;box-shadow:0 0 0 2px rgba(22,163,74,.1)}
+.family-history-card #family-status-cards .del-card:nth-child(2).sel::after{background:#15803d}
+.family-history-card #family-status-cards .del-card:nth-child(3).sel{border-color:#64748b;background:#f8fafc;box-shadow:0 0 0 2px rgba(100,116,139,.1)}
+.family-history-card #family-status-cards .del-card:nth-child(3).sel::after{background:#64748b}
+.family-disease-panel{margin-top:16px;padding:18px;border:1px solid var(--family-border);border-radius:14px;background:#fffdf7}
+.family-disease-intro{margin-bottom:14px;color:#6b5a36;font-size:12.5px;line-height:1.65}
+.family-disease-intro strong{display:block;margin-bottom:3px;color:#713f12;font-size:14px}
+.family-disease-list{display:grid;gap:12px}
+.family-disease-row{padding:15px;border:1px solid #ead9b4;border-left:4px solid #d97706;border-radius:12px;background:#fff}
+.family-disease-row-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.family-disease-row-title{color:#713f12;font-size:12px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+.family-disease-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.family-disease-fields .fg{margin:0;min-width:0}
+.family-history-card .fsel{background:#fffdf8;border-color:#e7cf98}
+.family-history-card .fsel:hover{border-color:#d6a84c}
+.family-history-card .fsel:focus{border-color:var(--family-accent);box-shadow:0 0 0 3px rgba(217,119,6,.1)}
+.family-remove-btn{padding:5px 9px;border:1px solid #fecaca;border-radius:7px;background:#fff;color:#b91c1c;font-family:inherit;font-size:10.5px;font-weight:700;cursor:pointer}
+.family-remove-btn:hover{background:#fef2f2;border-color:#f87171}
+.family-add-btn{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:10px 14px;border:1.5px dashed #d6a84c;border-radius:9px;background:#fffbeb;color:#854d0e;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+.family-add-btn:hover{border-style:solid;background:#fef3c7}
+.family-add-btn:disabled{cursor:not-allowed;opacity:.55}
+.family-policy-note{margin-top:13px;padding:9px 11px;border-left:3px solid #d97706;border-radius:6px;background:#fffbeb;color:#6b5a36;font-size:11px;line-height:1.6}
 
 @media(max-width:900px){
   .main{padding:0 18px}
@@ -181,6 +212,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
   .apgar-score-grid{grid-template-columns:1fr}
   .birth-fields-grid{grid-template-columns:1fr}
   .birth-field-full{grid-column:1}
+  .family-disease-fields{grid-template-columns:1fr}
 }
 
 @media(max-width:700px){
@@ -466,13 +498,14 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
     </div>
 
     <!-- Step 3: Family history -->
-    <div class="sec-card" id="step3">
+    <div class="sec-card family-history-card" id="step3">
       <div class="card-hd">
-        <div class="card-icon" style="background:rgba(34,197,94,.1)">🧬</div>
-        <div><h2>Family Disease History</h2><p>Only simple family information is needed.</p></div>
+        <div class="card-icon">🧬</div>
+        <div><h2>Family Disease History</h2><p>Record known conditions and who in the family has each one.</p></div>
       </div>
       <div class="card-bd">
-        <div class="fg">
+        <div class="family-question-panel">
+        <div class="fg" style="margin-bottom:0">
           <label class="fl">Is there a known family disease?</label>
           <div class="del-cards" id="family-status-cards">
             {% for value, title, note in [('yes', 'Yes', 'A family disease is known'), ('no', 'No', 'No family disease is known'), ('unknown', 'Unknown', 'Family history is not known')] %}
@@ -484,32 +517,52 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
           </div>
           <div class="ferr{% if errors.get('family_history_status') %} show{% endif %}" id="err_family_history_status">{{ errors.get('family_history_status', 'Select Yes, No, or Unknown.') }}</div>
         </div>
-        <div id="family-yes-fields" style="display:none">
-          <div class="dis-frow">
-            <div class="fg">
-              <label class="fl" for="family_disease">Disease name</label>
-              <select id="family_disease" name="family_disease" class="fsel{% if errors.get('family_disease') %} err{% endif %}">
+        </div>
+        {% set displayed_family_rows = family_rows if family_rows else [{'disease_code': form_data.get('family_disease', ''), 'affected_relative': form_data.get('affected_relative', '')}] %}
+        <div id="family-yes-fields" class="family-disease-panel" style="display:none">
+          <div class="family-disease-intro"><strong>Reported family conditions</strong>Add each known disease separately and select who has it.</div>
+          <div class="family-disease-list" id="familyDiseaseRows">
+            {% for row in displayed_family_rows %}
+            <div class="family-disease-row" data-family-row>
+              <div class="family-disease-row-head"><span class="family-disease-row-title">Condition {{ loop.index }}</span><button type="button" class="family-remove-btn" onclick="removeFamilyDisease(this)">Remove</button></div>
+              <div class="family-disease-fields">
+              <div class="fg">
+              <label class="fl" for="family_disease_{{ loop.index0 }}">Disease name</label>
+              <select id="family_disease_{{ loop.index0 }}" name="family_disease" class="fsel{% if errors.get('family_disease') %} err{% endif %}">
                 <option value="">- select a disease -</option>
                 {% for value, label in family_disease_options %}
-                <option value="{{ value }}" {% if form_data.get('family_disease') == value %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}" {% if row.disease_code == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
-                <option value="{{ other_family_disease[0] }}" {% if form_data.get('family_disease') == other_family_disease[0] %}selected{% endif %}>{{ other_family_disease[1] }}</option>
+                <option value="{{ other_family_disease[0] }}" {% if row.disease_code == other_family_disease[0] %}selected{% endif %}>{{ other_family_disease[1] }}</option>
               </select>
-              <div class="hint">The disease name is stored for the report only. It does not create a disease-specific probability.</div>
-              <div class="ferr{% if errors.get('family_disease') %} show{% endif %}" id="err_family_disease">{{ errors.get('family_disease', 'Select a disease or choose Other disease / not listed.') }}</div>
-            </div>
-            <div class="fg">
-              <label class="fl" for="affected_relative">Who has the disease?</label>
-              <select id="affected_relative" name="affected_relative" class="fsel{% if errors.get('affected_relative') %} err{% endif %}">
+              </div>
+              <div class="fg">
+              <label class="fl" for="affected_relative_{{ loop.index0 }}">Who has this disease?</label>
+              <select id="affected_relative_{{ loop.index0 }}" name="affected_relative" class="fsel{% if errors.get('affected_relative') %} err{% endif %}">
                 <option value="">- select -</option>
                 {% for value, label in [('father','Father'),('mother','Mother'),('both_parents','Both parents'),('other_family_member','Other family member'),('unknown','Unknown')] %}
-                <option value="{{ value }}" {% if form_data.get('affected_relative') == value %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}" {% if row.affected_relative == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
               </select>
-              <div class="ferr{% if errors.get('affected_relative') %} show{% endif %}" id="err_affected_relative">{{ errors.get('affected_relative', 'Select who has the disease.') }}</div>
+              </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="family-add-btn" id="addFamilyDisease" onclick="appendFamilyDiseaseRow()">+ Add another disease</button>
+          <div class="family-policy-note">Disease names are documented for the result and PDF.</div>
+          <div class="ferr{% if errors.get('family_disease') %} show{% endif %}" id="err_family_disease">{{ errors.get('family_disease', 'Select a disease for every reported condition.') }}</div>
+          <div class="ferr{% if errors.get('affected_relative') %} show{% endif %}" id="err_affected_relative">{{ errors.get('affected_relative', 'Select who has each reported disease.') }}</div>
+        </div>
+        <template id="familyDiseaseRowTemplate">
+          <div class="family-disease-row" data-family-row>
+            <div class="family-disease-row-head"><span class="family-disease-row-title">Condition</span><button type="button" class="family-remove-btn" onclick="removeFamilyDisease(this)">Remove</button></div>
+            <div class="family-disease-fields">
+              <div class="fg"><label class="fl" for="family_disease___index__">Disease name</label><select id="family_disease___index__" name="family_disease" class="fsel"><option value="">- select a disease -</option>{% for value, label in family_disease_options %}<option value="{{ value }}">{{ label }}</option>{% endfor %}<option value="{{ other_family_disease[0] }}">{{ other_family_disease[1] }}</option></select></div>
+              <div class="fg"><label class="fl" for="affected_relative___index__">Who has this disease?</label><select id="affected_relative___index__" name="affected_relative" class="fsel"><option value="">- select -</option>{% for value, label in [('father','Father'),('mother','Mother'),('both_parents','Both parents'),('other_family_member','Other family member'),('unknown','Unknown')] %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
             </div>
           </div>
-        </div>
+        </template>
         <div class="nav-bar">
           <button type="button" class="btn btn-ghost" onclick="goPrev(3)">&#x2190; Back</button>
           <button type="button" class="btn btn-next" onclick="goNext(3)">Review &#x2192;</button>
@@ -540,6 +593,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
     const SERVER_ERRORS = {{ errors | tojson }};
     const APGAR_FIELDS = ['appearance','pulse','grimace','activity','respiration'];
     const BIRTH_FIELDS = ['baby_name','birth_week','birth_weight','maternal_age','birth_plurality','co_twin_name','assessed_twin','child_gender','delivery_type','delivery_comp','delivery_complication_types'];
+    const MAX_FAMILY_DISEASES = {{ max_family_diseases }};
     const serverErrorFields=Object.keys(SERVER_ERRORS);
     let curStep=serverErrorFields.some(f=>APGAR_FIELDS.includes(f))?1:
       serverErrorFields.some(f=>BIRTH_FIELDS.includes(f))?2:
@@ -682,9 +736,49 @@ function pickRadioCard(lbl){
 
 function setFamilyStatus(card,status){
   pickRadioCard(card);
-  document.getElementById('family-yes-fields').style.display=status==='yes'?'block':'none';
+  const reported=status==='yes';
+  document.getElementById('family-yes-fields').style.display=reported?'block':'none';
+  document.querySelectorAll('#familyDiseaseRows select').forEach(select=>{select.disabled=!reported;});
   hideE('err_family_history_status');
 }
+
+let familyRowSequence=document.querySelectorAll('#familyDiseaseRows [data-family-row]').length;
+function refreshFamilyDiseaseRows(){
+  const rows=Array.from(document.querySelectorAll('#familyDiseaseRows [data-family-row]'));
+  rows.forEach((row,index)=>{
+    row.querySelector('.family-disease-row-title').textContent='Condition '+(index+1);
+    row.querySelector('.family-remove-btn').hidden=rows.length===1;
+  });
+  const addButton=document.getElementById('addFamilyDisease');
+  addButton.disabled=rows.length>=MAX_FAMILY_DISEASES;
+  addButton.textContent=rows.length>=MAX_FAMILY_DISEASES?'Maximum '+MAX_FAMILY_DISEASES+' diseases added':'+ Add another disease';
+}
+
+function appendFamilyDiseaseRow(){
+  const container=document.getElementById('familyDiseaseRows');
+  if(container.querySelectorAll('[data-family-row]').length>=MAX_FAMILY_DISEASES)return;
+  const template=document.getElementById('familyDiseaseRowTemplate');
+  const wrapper=document.createElement('div');
+  wrapper.innerHTML=template.innerHTML.replaceAll('__index__',String(familyRowSequence++));
+  container.appendChild(wrapper.firstElementChild);
+  hideE('err_family_disease');
+  hideE('err_affected_relative');
+  refreshFamilyDiseaseRows();
+  container.lastElementChild.querySelector('select').focus();
+}
+
+function removeFamilyDisease(button){
+  const rows=document.querySelectorAll('#familyDiseaseRows [data-family-row]');
+  if(rows.length<=1)return;
+  button.closest('[data-family-row]').remove();
+  refreshFamilyDiseaseRows();
+}
+
+document.getElementById('familyDiseaseRows').addEventListener('change',event=>{
+  if(event.target.name==='family_disease')hideE('err_family_disease');
+  if(event.target.name==='affected_relative')hideE('err_affected_relative');
+});
+refreshFamilyDiseaseRows();
 
 function validateFamilyHistory(){
   let ok=true;
@@ -695,15 +789,11 @@ function validateFamilyHistory(){
     hideE('err_family_history_status');
   }
   if(selected&&selected.value==='yes'){
-    const disease=document.getElementById('family_disease');
-    const relative=document.getElementById('affected_relative');
-    const diseaseName=disease.value;
-    if(!diseaseName){
-      showE('err_family_disease','family_disease');ok=false;
-    }else hideE('err_family_disease','family_disease');
-    if(!['father','mother','both_parents','other_family_member','unknown'].includes(relative.value)){
-      showE('err_affected_relative','affected_relative');ok=false;
-    }else hideE('err_affected_relative','affected_relative');
+    const rows=Array.from(document.querySelectorAll('#familyDiseaseRows [data-family-row]'));
+    const invalidDisease=rows.find(row=>!row.querySelector('select[name=family_disease]').value);
+    const invalidRelative=rows.find(row=>!['father','mother','both_parents','other_family_member','unknown'].includes(row.querySelector('select[name=affected_relative]').value));
+    if(invalidDisease){showE('err_family_disease');invalidDisease.querySelector('select[name=family_disease]').classList.add('err');ok=false;}else{hideE('err_family_disease');rows.forEach(row=>row.querySelector('select[name=family_disease]').classList.remove('err'));}
+    if(invalidRelative){showE('err_affected_relative');invalidRelative.querySelector('select[name=affected_relative]').classList.add('err');ok=false;}else{hideE('err_affected_relative');rows.forEach(row=>row.querySelector('select[name=affected_relative]').classList.remove('err'));}
   }
   return ok;
 }
@@ -759,6 +849,7 @@ if(initialFamilyStatus){
   if(card)card.classList.add('sel');
   document.getElementById('family-yes-fields').style.display=initialFamilyStatus.value==='yes'?'block':'none';
 }
+document.querySelectorAll('#familyDiseaseRows select').forEach(select=>{select.disabled=initialFamilyStatus?.value!=='yes';});
 refreshProg();
 
 document.getElementById('mainForm').addEventListener('submit',event=>{
@@ -790,10 +881,12 @@ function buildReview(){
   const dcValue=document.querySelector('input[name=delivery_comp]:checked')?.value;
   const complicationTypes=Array.from(document.querySelectorAll('input[name=delivery_complication_types]:checked')).map(input=>input.closest('label').querySelector('span').textContent.trim());
   const familyStatus=document.querySelector('input[name=family_history_status]:checked')?.value;
-  const familyDiseaseSelect=document.getElementById('family_disease');
-  const familyDisease=familyDiseaseSelect.value?familyDiseaseSelect.selectedOptions[0].textContent:'-';
-  const affectedRelative=document.getElementById('affected_relative').value;
   const relativeLabels={father:'Father',mother:'Mother',both_parents:'Both parents',other_family_member:'Other family member',unknown:'Unknown'};
+  const familyConditions=Array.from(document.querySelectorAll('#familyDiseaseRows [data-family-row]')).map(row=>{
+    const disease=row.querySelector('select[name=family_disease]');
+    const relative=row.querySelector('select[name=affected_relative]').value;
+    return (disease.value?disease.selectedOptions[0].textContent:'-')+' — '+(relativeLabels[relative]||'-');
+  });
   const items=[
     {l:'Baby\'s Name',v:babyName||'-'},
     {l:'5-minute APGAR',v:fs.every(f=>apgarVals[f]!==undefined)?t+'/10':'-'},
@@ -803,8 +896,7 @@ function buildReview(){
     {l:'Child\'s Gender',v:cg?cg:'-'},
     {l:'Delivery Method',v:dt==='vaginal'?'Vaginal Delivery':dt==='assisted'?'Assisted Delivery':dt==='cesarean'?'Cesarean Section':'-'},
     {l:'Delivery Complication',v:dcValue==='0'?'No':dcValue==='1'?'Yes — '+complicationTypes.join('; '):'-'},
-    {l:'Known Family Disease',v:familyStatus==='yes'?'Yes - '+familyDisease:familyStatus==='no'?'No':'Unknown'},
-    {l:'Who Has It',v:familyStatus==='yes'?(relativeLabels[affectedRelative]||'-'):'Not applicable'},
+    {l:'Family Disease History',v:familyStatus==='yes'?familyConditions.join('; '):familyStatus==='no'?'No known disease':'Unknown'},
   ];
   items.push({l:'Birth plurality',v:{singleton:'Singleton',twin:'Twins',multiple:'Other multiple birth',unknown:'Unknown'}[plurality]||'Unknown'});
   if(plurality==='twin')items.push({l:'Assessment identity',v:'Twin '+twinNumber+' — '+babyName},{l:'Other twin (separate assessment needed)',v:twinNumber==='1'?otherName:firstName});

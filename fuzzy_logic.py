@@ -463,7 +463,21 @@ def estimate_inherited_prob(diseases, child_gender):
 def apply_family_history_rules(family_history, return_rules=False):
     """Create a fuzzy family-history indicator from non-technical user input."""
     status = family_history.get('status', 'unknown')
-    relative = family_history.get('affected_relative', '')
+    items = family_history.get('items') or []
+    relatives = {
+        item.get('affected_relative', '') for item in items
+        if isinstance(item, dict)
+    }
+    if not relatives and family_history.get('affected_relative'):
+        relatives.add(family_history.get('affected_relative'))
+    relationship_rank = {
+        'both_parents': 5,
+        'father': 4,
+        'mother': 4,
+        'other_family_member': 3,
+        'unknown': 2,
+    }
+    relative = max(sorted(relatives), key=lambda value: relationship_rank.get(value, 0), default='')
     is_no = 1.0 if status == 'no' else 0.0
     is_unknown = 1.0 if status == 'unknown' else 0.0
     is_yes = 1.0 if status == 'yes' else 0.0
@@ -506,18 +520,27 @@ def apply_family_history_rules(family_history, return_rules=False):
 
 def family_history_message(family_history, family_history_risk_index):
     status = family_history.get('status', 'unknown')
+    items = family_history.get('items') or []
+    relatives = {
+        item.get('affected_relative', '') for item in items
+        if isinstance(item, dict)
+    }
     relative = family_history.get('affected_relative', '')
+    if relative:
+        relatives.add(relative)
     if status == 'no':
         return 'No known family disease was reported, so no additional family-history follow-up is suggested by this input alone.'
     if status == 'unknown':
         return 'Family disease history is unknown, so this part of the assessment is less certain.'
-    if relative == 'both_parents':
-        return 'A disease was reported in both parents, so family history may need additional attention.'
-    if relative in ('father', 'mother'):
-        return 'A disease was reported in one parent, so family history may need additional attention.'
-    if relative == 'other_family_member':
-        return 'A disease was reported in another family member, creating a smaller family-history concern.'
-    return 'A family disease was reported, but who has it is unknown, so this part is less certain.'
+    count = len(items) or 1
+    condition_word = 'condition was' if count == 1 else f'conditions were'
+    if 'both_parents' in relatives:
+        return f'{count} family {condition_word} reported; at least one affects both parents, so follow-up may need additional attention.'
+    if relatives.intersection({'father', 'mother'}):
+        return f'{count} family {condition_word} reported; at least one affects a parent, so follow-up may need additional attention.'
+    if 'other_family_member' in relatives:
+        return f'{count} family {condition_word} reported in another family member.'
+    return f'{count} family {condition_word} reported, but at least one affected relative is unknown.'
 
  
 def _rule(rule_id, module, name, description, outcome, activation):
@@ -1096,13 +1119,24 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
     }
     family_history_items = []
     if family_history.get('status') == 'yes':
-        family_history_items.append({
+        source_items = family_history.get('items') or [{
             'disease': family_history.get('disease', ''),
-            'affected_relative': affected_relative_labels.get(
-                family_history.get('affected_relative'), 'Unknown'
-            ),
-            'risk_index': family_history_risk_index,
-        })
+            'affected_relative': family_history.get('affected_relative', ''),
+        }]
+        for item in source_items:
+            item_history = {
+                'status': 'yes',
+                'disease': item.get('disease', ''),
+                'affected_relative': item.get('affected_relative', ''),
+            }
+            item_index = defuzzify_risk(apply_family_history_rules(item_history))
+            family_history_items.append({
+                'disease': item.get('disease', ''),
+                'affected_relative': affected_relative_labels.get(
+                    item.get('affected_relative'), 'Unknown'
+                ),
+                'risk_index': item_index,
+            })
     family_summary = family_history_message(family_history, family_history_risk_index)
 
     # Legacy database fields mirror immediate condition; no combined inference.
@@ -1130,8 +1164,9 @@ def assess_risk(appearance, pulse, grimace, activity, respiration,
         birth_weight_g, maternal_age, delivery_type, delivery_comp, normalized_gender,
     )) and family_history.get('status') in ('yes', 'no', 'unknown')
     if family_history.get('status') == 'yes':
-        important_inputs_complete = important_inputs_complete and bool(
-            family_history.get('disease') and family_history.get('affected_relative')
+        source_items = family_history.get('items') or [family_history]
+        important_inputs_complete = important_inputs_complete and bool(source_items) and all(
+            item.get('disease') and item.get('affected_relative') for item in source_items
         )
     confidence = calculate_assessment_confidence(
         immediate_risk_levels, important_inputs_complete, {'status': 'no'}

@@ -160,6 +160,25 @@ class DatabasePersistenceTests(unittest.TestCase):
         self.assertEqual(record.triggered_rules, results['triggered_rules'])
         self.assertEqual(record.main_contributing_factors, results['main_contributing_factors'])
 
+    def test_record_preserves_multiple_family_diseases(self):
+        values, raw_form = valid_values()
+        values['family_history']['items'] = [
+            {'disease': 'Cystic fibrosis', 'disease_code': 'cystic_fibrosis', 'affected_relative': 'mother'},
+            {'disease': 'Asthma', 'disease_code': 'asthma', 'affected_relative': 'father'},
+        ]
+        raw_form['family_disease'] = ['cystic_fibrosis', 'asthma']
+        raw_form['affected_relative'] = ['mother', 'father']
+        results = sample_results()
+        results['family_history'] = values['family_history']
+        results['family_history_items'].append({
+            'disease': 'Asthma', 'affected_relative': 'Father', 'risk_index': 50.0,
+        })
+
+        record = build_assessment_record(values, results, raw_form, None)
+
+        self.assertEqual(record.raw_inputs['family_disease'], ['cystic_fibrosis', 'asthma'])
+        self.assertEqual(len(record.result_snapshot['family_history_items']), 2)
+
 
 if __name__ == '__main__':
     unittest.main()

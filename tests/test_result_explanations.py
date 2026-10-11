@@ -115,6 +115,20 @@ class FamilyHistoryIndicatorTests(unittest.TestCase):
 
         self.assertEqual(rule['activation'], 1.0)
 
+    def test_multiple_diseases_use_strongest_relationship_without_count_multiplier(self):
+        levels = apply_family_history_rules({
+            'status': 'yes',
+            'items': [
+                {'disease': 'Asthma', 'affected_relative': 'father'},
+                {'disease': 'Cystic fibrosis', 'affected_relative': 'both_parents'},
+            ],
+        })
+        both_parents = apply_family_history_rules({
+            'status': 'yes', 'disease': 'Cystic fibrosis', 'affected_relative': 'both_parents'
+        })
+
+        self.assertEqual(levels, both_parents)
+
 
 class UserGuidanceTests(unittest.TestCase):
     def test_recommendations_depend_on_risk_level(self):
