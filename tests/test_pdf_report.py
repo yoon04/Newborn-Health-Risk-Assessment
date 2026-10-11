@@ -18,7 +18,7 @@ def sample_report():
             'maternal_age': 31,
             'child_gender': 'Female',
             'delivery_type': 'Cesarean Section',
-            'delivery_complication': 'Yes',
+            'delivery_complication': 'Yes — Meconium-stained amniotic fluid; Umbilical cord complication',
             'family_history_status': 'Yes',
             'family_disease': 'Congenital Deafness',
             'affected_relative': 'Other family member',
@@ -126,6 +126,10 @@ class PdfReportTests(unittest.TestCase):
         self.assertEqual(reader.metadata.title, 'Newborn Health Risk Assessment Results')
         self.assertIn('APGAR Score Breakdown', text)
         self.assertIn('Birth Summary', text)
+        self.assertIn('Meconium-stained', text)
+        self.assertIn('Umbilical cord', text)
+        self.assertIn('individual types do', text)
+        self.assertIn('not receive separate numerical weights', text)
         self.assertIn('Immediate Condition Risk', text)
         self.assertIn('Birth-Related Risk', text)
         self.assertIn('Family-History Risk', text)

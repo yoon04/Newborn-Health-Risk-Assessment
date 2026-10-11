@@ -211,7 +211,9 @@ The application does not call `db.create_all()` and does not delete or recreate 
 - Maternal age: expected range in UI is 12 to 60
 - Child gender: male or female
 - Delivery type: vaginal, assisted, or Cesarean
-- Delivery complication: yes or no; delivery type alone is not treated as a complication
+- Delivery complication: yes or no; when yes, select one or more reported complication types
+- Selected complication types are stored for context and reporting. The current fuzzy calculation still uses only the binary yes/no value, so individual types receive no separate numerical weights.
+- Delivery type alone is not treated as a complication
 
 ### Family-history inputs
 - Is there a known family disease? Yes, No, or Unknown

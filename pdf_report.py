@@ -185,7 +185,7 @@ def build_pdf_report(report):
             else:
                 story.append(_paragraph(f'{minute} min: Not recorded', body_style))
         story.append(_paragraph('Earlier concerns remain documented; a higher total does not confirm their resolution. Scores are not averaged. Scores recorded during support require clinician interpretation.', small_style))
-        story.append(_paragraph('Fuzzy inference uses the five components and APGAR total from the latest complete recorded observation, plus delivery complication. Earlier scores provide history, not an averaged input. Risk indices and triage are outputs.', small_style))
+        story.append(_paragraph('Fuzzy inference uses the five components and APGAR total from the latest complete recorded observation, plus whether any delivery complication was reported. Selected complication types are documentation context and do not receive separate numerical weights. Earlier scores provide history, not an averaged input. Risk indices and triage are outputs.', small_style))
         if report.get('repeat_observation_message'):
             story.append(_paragraph(report['repeat_observation_message'], body_style))
 
@@ -261,6 +261,11 @@ def build_pdf_report(report):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
     ]))
     story.extend([_section_heading(_birth_summary_heading(report), heading_style), birth_table])
+    if str(inputs.get('delivery_complication', '')).startswith('Yes'):
+        story.append(_paragraph(
+            'Selected complication types provide clinical context. The calculation uses only whether any complication was reported; individual types do not receive separate numerical weights.',
+            small_style,
+        ))
 
     for module in report.get('risk_modules', []):
         risk_index = float(module.get('risk_index', 0))

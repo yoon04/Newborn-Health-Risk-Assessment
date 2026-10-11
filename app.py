@@ -75,6 +75,19 @@ WEIGHT_UNITS = {'g', 'kg', 'lb'}
 CHILD_GENDERS = {'male', 'female'}
 DELIVERY_TYPES = {'vaginal', 'assisted', 'cesarean'}
 DELIVERY_COMPLICATIONS = {'0', '1'}
+DELIVERY_COMPLICATION_OPTIONS = (
+    ('fetal_distress', 'Fetal distress or non-reassuring fetal status'),
+    ('meconium', 'Meconium-stained amniotic fluid'),
+    ('umbilical_cord', 'Umbilical cord complication'),
+    ('prolonged_or_obstructed_labor', 'Prolonged or obstructed labor'),
+    ('membrane_rupture', 'Premature or prolonged rupture of membranes'),
+    ('maternal_fever_or_infection', 'Maternal fever or suspected infection during labor'),
+    ('shoulder_dystocia', 'Shoulder dystocia or difficult delivery'),
+    ('significant_bleeding_or_placental', 'Significant bleeding or placental complication'),
+    ('other', 'Other reported delivery complication'),
+    ('unknown', 'Complication reported, type unknown or not documented'),
+)
+DELIVERY_COMPLICATION_LABELS = dict(DELIVERY_COMPLICATION_OPTIONS)
 FAMILY_HISTORY_STATUSES = {'yes', 'no', 'unknown'}
 AFFECTED_RELATIVES = {'father', 'mother', 'both_parents', 'other_family_member', 'unknown'}
 FAMILY_DISEASE_OPTIONS = (
@@ -220,8 +233,25 @@ def validate_submission(form):
     raw_complication = (form.get('delivery_comp') or '').strip()
     if raw_complication not in DELIVERY_COMPLICATIONS:
         errors['delivery_comp'] = 'Select whether a delivery complication occurred.'
+        values['delivery_complication_codes'] = []
+        values['delivery_complication_types'] = []
     else:
         values['delivery_comp'] = int(raw_complication)
+        submitted_complications = form.getlist('delivery_complication_types')
+        selected_codes = [
+            code for code, _label in DELIVERY_COMPLICATION_OPTIONS
+            if code in submitted_complications
+        ]
+        invalid_codes = set(submitted_complications) - set(DELIVERY_COMPLICATION_LABELS)
+        if raw_complication == '1' and (not selected_codes or invalid_codes):
+            errors['delivery_complication_types'] = (
+                'Select at least one reported complication type.'
+            )
+        values['delivery_complication_codes'] = selected_codes if raw_complication == '1' else []
+        values['delivery_complication_types'] = [
+            DELIVERY_COMPLICATION_LABELS[code]
+            for code in values['delivery_complication_codes']
+        ]
 
     family_status = (form.get('family_history_status') or '').strip().lower()
     disease_choice = (form.get('family_disease') or '').strip().lower()
@@ -283,7 +313,8 @@ def _safe_next_url(target):
     return target
 
 
-def render_assessment_form(errors=None, form_data=None, family_rows=None, status=200):
+def render_assessment_form(errors=None, form_data=None, family_rows=None,
+                           selected_delivery_complications=None, status=200):
     submitted_unit = (form_data or {}).get('weight_unit', 'lb')
     display_weight_unit = submitted_unit if submitted_unit in WEIGHT_UNITS else 'lb'
     return render_template(
@@ -294,6 +325,8 @@ def render_assessment_form(errors=None, form_data=None, family_rows=None, status
         display_weight_unit=display_weight_unit,
         family_disease_options=FAMILY_DISEASE_OPTIONS,
         other_family_disease=OTHER_FAMILY_DISEASE,
+        delivery_complication_options=DELIVERY_COMPLICATION_OPTIONS,
+        selected_delivery_complications=selected_delivery_complications or [],
     ), status
 
 
@@ -355,7 +388,9 @@ def build_report_payload(values, results):
             'maternal_age': values['maternal_age'],
             'child_gender': values['child_gender'].title(),
             'delivery_type': results['delivery_type'],
-            'delivery_complication': results['delivery_complication'],
+            'delivery_complication': results.get(
+                'delivery_complication_display', results['delivery_complication']
+            ),
             'family_history_status': values['family_history']['status'].title(),
             'family_disease': values['family_history']['disease'],
             'affected_relative': results['family_history_items'][0]['affected_relative'] if results['family_history_items'] else '',
@@ -427,6 +462,9 @@ def index():
                 errors=errors,
                 form_data=request.form.to_dict(flat=True),
                 family_rows=family_rows,
+                selected_delivery_complications=request.form.getlist(
+                    'delivery_complication_types'
+                ),
                 status=400,
             )
 
@@ -444,14 +482,25 @@ def index():
         results['baby_name'] = values.get('baby_name', '')
         results['twin_context'] = values.get('twin_context')
         results['birth_plurality'] = values.get('birth_plurality', 'unknown')
+        results['delivery_complication_codes'] = values.get('delivery_complication_codes', [])
+        results['delivery_complication_types'] = values.get('delivery_complication_types', [])
+        results['delivery_complication_display'] = (
+            'No'
+            if not values['delivery_comp']
+            else 'Yes — ' + '; '.join(values['delivery_complication_types'])
+        )
         results['ml_research'] = estimate_nicu_research(values)
         results['assessment_id'] = None
         if results.get('overall_risk_index') is not None:
             try:
+                raw_submission = request.form.to_dict(flat=True)
+                raw_submission['delivery_complication_types'] = request.form.getlist(
+                    'delivery_complication_types'
+                )
                 stored_assessment = save_assessment(
                     values,
                     results,
-                    request.form.to_dict(flat=True),
+                    raw_submission,
                     None,
                 )
                 results['assessment_id'] = stored_assessment.id
@@ -564,6 +613,9 @@ def _replay_assessment(assessment):
     }
     values['apgar_observations'] = (assessment.result_snapshot or {}).get('apgar_timeline') or None
     values['birth_plurality'] = (assessment.raw_inputs or {}).get('birth_plurality') or 'unknown'
+    snapshot = assessment.result_snapshot or {}
+    values['delivery_complication_codes'] = snapshot.get('delivery_complication_codes', [])
+    values['delivery_complication_types'] = snapshot.get('delivery_complication_types', [])
     results = assess_risk(
         values['appearance'], values['pulse'], values['grimace'],
         values['activity'], values['respiration'], values['birth_week'],
@@ -579,6 +631,14 @@ def _replay_assessment(assessment):
     # Preserve the original ML estimate; saved PDFs must not silently rerun a new model.
     results['ml_research'] = (assessment.result_snapshot or {}).get('ml_research')
     results['twin_context'] = (assessment.result_snapshot or {}).get('twin_context')
+    results['delivery_complication_codes'] = values['delivery_complication_codes']
+    results['delivery_complication_types'] = values['delivery_complication_types']
+    results['delivery_complication_display'] = (
+        'No' if not values['delivery_comp'] else (
+            'Yes — ' + '; '.join(values['delivery_complication_types'])
+            if values['delivery_complication_types'] else 'Yes'
+        )
+    )
     return values, results
 
 

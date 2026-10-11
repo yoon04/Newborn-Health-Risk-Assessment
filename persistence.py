@@ -9,7 +9,7 @@ RAW_INPUT_FIELDS = (
     'baby_name', 'co_twin_name', 'assessed_twin',
     'appearance', 'pulse', 'grimace', 'activity', 'respiration',
     'birth_week', 'birth_weight', 'weight_unit', 'maternal_age',
-    'child_gender', 'delivery_type', 'delivery_comp', 'birth_plurality',
+    'child_gender', 'delivery_type', 'delivery_comp', 'delivery_complication_types', 'birth_plurality',
     'family_history_status', 'family_disease', 'affected_relative',
 )
 
@@ -30,7 +30,13 @@ def _json_safe(value):
 
 def _raw_input_snapshot(raw_form):
     fields = RAW_INPUT_FIELDS + ('apgar_mode',) + tuple(f'apgar_{minute}_{field}' for minute in (1, 5, 10, 15, 20) for field in ('appearance', 'pulse', 'grimace', 'activity', 'respiration', 'support'))
-    return {field: str(raw_form.get(field, '') or '') for field in fields}
+    snapshot = {field: str(raw_form.get(field, '') or '') for field in fields}
+    selected = raw_form.get('delivery_complication_types', [])
+    snapshot['delivery_complication_types'] = (
+        [str(value) for value in selected] if isinstance(selected, (list, tuple))
+        else ([str(selected)] if selected else [])
+    )
+    return snapshot
 
 
 def _result_snapshot(results):

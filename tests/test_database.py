@@ -27,6 +27,7 @@ def valid_values():
         'child_gender': 'female',
         'delivery_type': 'assisted',
         'delivery_comp': '1',
+        'delivery_complication_types': 'fetal_distress',
         'family_history_status': 'yes',
         'family_disease': 'cystic_fibrosis',
         'affected_relative': 'mother',
