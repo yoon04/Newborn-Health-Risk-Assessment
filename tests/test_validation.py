@@ -45,9 +45,39 @@ class SubmissionValidationTests(unittest.TestCase):
         self.assertEqual(values['birth_weight_g'], 3200)
         self.assertEqual(values['delivery_type'], 'vaginal')
         self.assertEqual(values['delivery_comp'], 0)
+        self.assertEqual(values['delivery_complication_types'], [])
         self.assertEqual(values['family_history'], {
             'status': 'no', 'disease': '', 'affected_relative': ''
         })
+
+    def test_reported_complication_requires_and_normalizes_types(self):
+        form = valid_form(delivery_comp='1')
+        _, errors, _ = application.validate_submission(form)
+        self.assertIn('delivery_complication_types', errors)
+
+        form.setlist('delivery_complication_types', ['meconium', 'umbilical_cord'])
+        values, errors, _ = application.validate_submission(form)
+        self.assertEqual(errors, {})
+        self.assertEqual(values['delivery_comp'], 1)
+        self.assertEqual(values['delivery_complication_codes'], ['meconium', 'umbilical_cord'])
+        self.assertEqual(values['delivery_complication_types'], [
+            'Meconium-stained amniotic fluid',
+            'Umbilical cord complication',
+        ])
+
+    def test_no_complication_discards_hidden_detail_values(self):
+        form = valid_form(delivery_comp='0')
+        form.setlist('delivery_complication_types', ['meconium'])
+        values, errors, _ = application.validate_submission(form)
+        self.assertEqual(errors, {})
+        self.assertEqual(values['delivery_complication_codes'], [])
+        self.assertEqual(values['delivery_complication_types'], [])
+
+    def test_unknown_complication_code_is_rejected(self):
+        form = valid_form(delivery_comp='1')
+        form.setlist('delivery_complication_types', ['not-a-real-option'])
+        _, errors, _ = application.validate_submission(form)
+        self.assertIn('delivery_complication_types', errors)
 
     def test_baby_name_is_required_and_limited(self):
         _, errors, _ = application.validate_submission(valid_form(baby_name=''))
@@ -184,6 +214,38 @@ class RouteValidationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'name="baby_name"', response.data)
 
+    def test_form_collects_conditional_delivery_complication_types(self):
+        response = self.client.get('/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'name="delivery_complication_types"', response.data)
+        for code, label in application.DELIVERY_COMPLICATION_OPTIONS:
+            self.assertIn(f'value="{code}"'.encode(), response.data)
+            self.assertIn(label.encode(), response.data)
+        self.assertIn(b'individual types do not receive separate numerical weights', response.data)
+
+    @patch('fuzzy_logic.generate_visualizations', return_value=(45.0, {
+        'apgar': '', 'week': '', 'weight': '', 'age': '', 'genetic': '',
+        'immediate': '', 'birth': '', 'family': '', 'final': '',
+    }))
+    def test_selected_complications_are_displayed_and_saved_without_separate_weighting(self, _plots):
+        form = valid_form(delivery_comp='1')
+        form.setlist('delivery_complication_types', ['meconium', 'umbilical_cord'])
+
+        response = self.client.post('/', data=form)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Meconium-stained amniotic fluid', response.data)
+        self.assertIn(b'Umbilical cord complication', response.data)
+        self.assertIn(b'individual types do not receive separate numerical weights', response.data)
+        with application.app.app_context():
+            stored = Assessment.query.order_by(Assessment.id.desc()).first()
+            self.assertEqual(stored.result_snapshot['delivery_complication_codes'], ['meconium', 'umbilical_cord'])
+            self.assertEqual(stored.result_snapshot['delivery_complication_types'], [
+                'Meconium-stained amniotic fluid', 'Umbilical cord complication'
+            ])
+            self.assertTrue(stored.delivery_complication)
+
     def test_profile_page_shows_user_and_baby_summary(self):
         with application.app.app_context():
             user = User.query.filter_by(email='route-test@example.com').one()
@@ -297,6 +359,8 @@ class RouteValidationTests(unittest.TestCase):
         self.assertIn(b'Birth-Related Monitoring', response.data)
         self.assertIn(b'Family-History Follow-up', response.data)
         self.assertIn(b'Recommended actions by module', response.data)
+        self.assertIn(b'module-actions-grid', response.data)
+        self.assertIn(b'module-action-priority', response.data)
         self.assertIn(b'Important Triggered Fuzzy Rules', response.data)
         self.assertIn(b'Family disease history is unknown', response.data)
 
