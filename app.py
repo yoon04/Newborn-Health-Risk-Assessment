@@ -364,6 +364,8 @@ def set_language(language):
     if language not in SUPPORTED_LANGUAGES:
         abort(404)
     session['language'] = language
+    if request.headers.get('X-Requested-With') == 'language-switch':
+        return '', 204
     return redirect(_safe_next_url(request.form.get('next')) or url_for('index'))
 
 

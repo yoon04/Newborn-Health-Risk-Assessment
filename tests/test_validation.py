@@ -420,6 +420,8 @@ class RouteValidationTests(unittest.TestCase):
         self.assertIn(b'module-action-priority', response.data)
         self.assertIn(b'Important Triggered Fuzzy Rules', response.data)
         self.assertIn(b'Family disease history is unknown', response.data)
+        self.assertIn(b'Back to Review &amp; Edit', response.data)
+        self.assertIn(b'/?resume=1', response.data)
 
     @patch('fuzzy_logic.generate_visualizations', return_value=(45.0, {
         'apgar': '', 'week': '', 'weight': '', 'age': '', 'genetic': '',

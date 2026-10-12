@@ -1,2 +1,23 @@
 <script>window.NHRA_LANGUAGE = {{ current_language|tojson }};</script>
-<script src="{{ url_for('static', filename='i18n.js') }}?v=2" defer></script>
+<script src="{{ url_for('static', filename='i18n.js') }}?v=7" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.language-form').forEach(function (form) {
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const language = form.action.endsWith('/my') ? 'my' : 'en';
+      try {
+        await fetch(form.action, {method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: {'X-Requested-With': 'language-switch'}});
+        if (window.NHRA_SET_LANGUAGE) window.NHRA_SET_LANGUAGE(language);
+        document.querySelectorAll('.language-button').forEach(function (button) {
+          const active = button.getAttribute('lang') === language;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+      } catch (error) {
+        form.submit();
+      }
+    });
+  });
+});
+</script>

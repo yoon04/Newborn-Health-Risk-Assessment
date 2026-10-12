@@ -595,10 +595,20 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
     const APGAR_FIELDS = ['appearance','pulse','grimace','activity','respiration'];
     const BIRTH_FIELDS = ['baby_name','birth_week','birth_weight','maternal_age','birth_plurality','co_twin_name','assessed_twin','child_gender','delivery_type','delivery_comp','delivery_complication_types'];
     const MAX_FAMILY_DISEASES = {{ max_family_diseases }};
+    const ASSESSMENT_DRAFT_KEY = 'nhra-assessment-draft-v1';
+    const queryParameters = new URLSearchParams(window.location.search);
+    if(queryParameters.has('new')){
+      try{sessionStorage.removeItem(ASSESSMENT_DRAFT_KEY);}catch(error){}
+    }
+    function readAssessmentDraft(){
+      try{return JSON.parse(sessionStorage.getItem(ASSESSMENT_DRAFT_KEY)||'null');}catch(error){return null;}
+    }
+    const savedAssessmentDraft=queryParameters.has('new')?null:readAssessmentDraft();
     const serverErrorFields=Object.keys(SERVER_ERRORS);
     let curStep=serverErrorFields.some(f=>APGAR_FIELDS.includes(f))?1:
       serverErrorFields.some(f=>BIRTH_FIELDS.includes(f))?2:
-      serverErrorFields.some(f=>['family_history_status','family_disease','affected_relative'].includes(f))?3:1;
+      serverErrorFields.some(f=>['family_history_status','family_disease','affected_relative'].includes(f))?3:
+      Math.min(4,Math.max(1,Number(savedAssessmentDraft?.step)||1));
     let apgarVals={};
 
 function updateTwinFields(){
@@ -633,8 +643,8 @@ function refreshProg(){
   }
   document.querySelectorAll('.sec-card').forEach((c,i)=>c.classList.toggle('active',i+1===curStep));
 }
-function goNext(f){if(!validate(f))return;if(f===3)buildReview();curStep=f+1;refreshProg();window.scrollTo({top:0,behavior:'smooth'});}
-function goPrev(f){curStep=f-1;refreshProg();window.scrollTo({top:0,behavior:'smooth'});}
+function goNext(f){if(!validate(f))return;if(f===3)buildReview();curStep=f+1;refreshProg();saveAssessmentDraft();window.scrollTo({top:0,behavior:'smooth'});}
+function goPrev(f){curStep=f-1;refreshProg();saveAssessmentDraft();window.scrollTo({top:0,behavior:'smooth'});}
 
 function showE(e,f,message){const err=document.getElementById(e);if(err){if(message)err.textContent=message;err.classList.add('show');}if(f){const field=document.getElementById(f);if(field)field.classList.add('err');}}
 function hideE(e,f){const err=document.getElementById(e);if(err)err.classList.remove('show');if(f){const field=document.getElementById(f);if(field)field.classList.remove('err');}}
@@ -880,13 +890,14 @@ function buildReview(){
   const cg=document.getElementById('child_gender').value;
   const dt=document.querySelector('input[name=delivery_type]:checked')?.value;
   const dcValue=document.querySelector('input[name=delivery_comp]:checked')?.value;
-  const complicationTypes=Array.from(document.querySelectorAll('input[name=delivery_complication_types]:checked')).map(input=>input.closest('label').querySelector('span').textContent.trim());
+  const complicationTypes=Array.from(document.querySelectorAll('input[name=delivery_complication_types]:checked')).map(input=>{const label=input.closest('label').querySelector('span');return label.dataset.i18nEnglish||label.textContent.trim();});
   const familyStatus=document.querySelector('input[name=family_history_status]:checked')?.value;
   const relativeLabels={father:'Father',mother:'Mother',both_parents:'Both parents',other_family_member:'Other family member',unknown:'Unknown'};
   const familyConditions=Array.from(document.querySelectorAll('#familyDiseaseRows [data-family-row]')).map(row=>{
     const disease=row.querySelector('select[name=family_disease]');
     const relative=row.querySelector('select[name=affected_relative]').value;
-    return (disease.value?disease.selectedOptions[0].textContent:'-')+' — '+(relativeLabels[relative]||'-');
+    const option=disease.selectedOptions[0];
+    return (disease.value?(option.dataset.i18nEnglish||option.textContent):'-')+' — '+(relativeLabels[relative]||'-');
   });
   const items=[
     {l:'Baby\'s Name',v:babyName||'-'},
@@ -992,6 +1003,66 @@ document.getElementById('mainForm').addEventListener('submit',function(event){
     const count=fields.filter(f=>document.getElementById('apgar_'+minute+'_'+f).value!=='').length;
     if(count>0&&count<5){event.preventDefault();alert('Complete all five components for '+minute+' minutes, or clear that observation.');return;}
   }
+});
+
+function saveAssessmentDraft(){
+  const form=document.getElementById('mainForm');
+  if(!form)return;
+  const fields={};
+  Array.from(form.elements).forEach(element=>{
+    if(!element.name||['submit','button'].includes(element.type))return;
+    if((element.type==='radio'||element.type==='checkbox')&&!element.checked)return;
+    if(!fields[element.name])fields[element.name]=[];
+    fields[element.name].push(element.value);
+  });
+  try{sessionStorage.setItem(ASSESSMENT_DRAFT_KEY,JSON.stringify({step:curStep,fields}));}catch(error){}
+}
+
+function restoreAssessmentDraft(){
+  const draft=savedAssessmentDraft;
+  if(!draft||!draft.fields)return;
+  const diseaseCount=(draft.fields.family_disease||[]).length;
+  while(document.querySelectorAll('#familyDiseaseRows [data-family-row]').length<diseaseCount){
+    appendFamilyDiseaseRow();
+  }
+  const mainForm=document.getElementById('mainForm');
+  Object.entries(draft.fields).forEach(([name,values])=>{
+    const elements=Array.from(document.getElementsByName(name)).filter(element=>mainForm.contains(element));
+    if(!elements.length)return;
+    if(elements[0].type==='radio'||elements[0].type==='checkbox'){
+      elements.forEach(element=>{element.checked=values.includes(element.value);});
+    }else{
+      elements.forEach((element,index)=>{element.value=values[Math.min(index,values.length-1)]??'';});
+    }
+  });
+  updateTwinFields();
+  updateDeliveryComplicationFields();
+  apgarVals={};
+  APGAR_FIELDS.forEach(field=>{
+    const selected=document.querySelector(`select[name="${field}"]`);
+    if(selected&&selected.value!=='')apgarVals[field]=Number(selected.value);
+  });
+  document.querySelectorAll('.del-cards').forEach(group=>{
+    const selected=group.querySelector('input:checked');
+    group.querySelectorAll('.del-card').forEach(card=>card.classList.toggle('sel',Boolean(selected&&card.contains(selected))));
+  });
+  const familyStatus=document.querySelector('input[name=family_history_status]:checked');
+  document.getElementById('family-yes-fields').style.display=familyStatus?.value==='yes'?'block':'none';
+  document.querySelectorAll('#familyDiseaseRows select').forEach(select=>{select.disabled=familyStatus?.value!=='yes';});
+  setUnit(document.getElementById('weight_unit').value||'lb');
+  updateScore();
+  updateTimedObservations();
+  if(curStep===4)buildReview();
+  refreshFamilyDiseaseRows();
+  refreshProg();
+}
+
+restoreAssessmentDraft();
+document.getElementById('mainForm').addEventListener('input',saveAssessmentDraft);
+document.getElementById('mainForm').addEventListener('change',saveAssessmentDraft);
+document.querySelectorAll('.language-form').forEach(form=>form.addEventListener('submit',saveAssessmentDraft));
+document.getElementById('mainForm').addEventListener('submit',event=>{
+  if(!event.defaultPrevented){curStep=4;saveAssessmentDraft();}
 });
 </script>
 

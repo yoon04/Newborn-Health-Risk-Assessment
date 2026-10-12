@@ -31,6 +31,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 .factor-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.factor-panel{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px}.factor-panel h3{font-size:14px;margin-bottom:10px}.factor-list{padding-left:20px;color:#475569;font-size:12.5px;line-height:1.6}.factor-list li{margin-bottom:8px}.factor-list small{display:block;color:var(--muted);margin-top:2px}
 .rules-table{width:100%;border-collapse:collapse;font-size:12px}.rules-table th,.rules-table td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}.rules-table th{font-size:10.5px;text-transform:uppercase;color:#64748b;background:var(--surface2)}.rule-id{font-weight:700;color:var(--accent);white-space:nowrap}.activation{font-weight:700;white-space:nowrap}
 .report-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}.report-actions form{margin:0}.download-btn,.back-btn{display:inline-flex;align-items:center;padding:12px 24px;border-radius:10px;font-size:13.5px;font-weight:600;text-decoration:none;font-family:inherit}.download-btn{background:var(--accent);border:1.5px solid var(--accent);color:#fff;cursor:pointer}.back-btn{background:var(--surface2);border:1.5px solid var(--border);color:var(--text)}
+.result-top-actions{max-width:1320px;margin:18px auto -14px;padding:0 20px;display:flex;justify-content:flex-start}
 @media(max-width:960px){.birth-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.risk-pair{grid-template-columns:1fr}.risk-chart{max-width:680px;width:100%;margin:0 auto}}@media(max-width:560px){.apgar-comps,.birth-grid,.factor-grid{grid-template-columns:1fr}.score-layout{flex-direction:column;align-items:center}.score-main{width:100%}.genetic-line,.graph-help-grid{grid-template-columns:1fr}.rules-table{font-size:11px}.rules-table th,.rules-table td{padding:7px}}
 .graph-caption{margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--muted)}.immediate-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}.immediate-summary h3{font-size:14px;font-weight:600;margin-bottom:10px}.immediate-summary ul{padding-left:18px;font-size:12px;line-height:1.7;color:#475569}.immediate-summary li+li{margin-top:8px}.observation-footnote{font-size:11px;color:var(--muted);line-height:1.5;margin-top:14px}@media(max-width:960px){.immediate-summary{grid-template-columns:1fr}}@media(max-width:560px){.main{padding:0 12px}.score-card{padding:16px}.charts-grid{grid-template-columns:minmax(0,1fr)}}
 .birth-summary-text{font-size:12px;line-height:1.7;color:#475569}.birth-reason-title{font-size:12px;font-weight:600;margin:14px 0 6px}
@@ -42,6 +43,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
 <body>
 {% set active_nav = 'assess' %}{% include '_nav.html' %}
 <div class="hero"><h1>Assessment <em>Results</em></h1><p>Summary of newborn risk indicators{% if results.baby_name %} for <strong>{{ results.baby_name }}</strong>{% endif %}</p></div>
+<div class="result-top-actions"><a href="{{ url_for('index', resume=1) }}" class="back-btn">&#x2190; Back to Review &amp; Edit</a></div>
 <div class="main">
 {% include '_twin_context.html' %}
 
@@ -153,7 +155,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(circl
   </details>
   <div class="score-card"><p class="score-desc"><strong>Note:</strong> This is not a clinical diagnosis. Please consult a healthcare professional for medical decisions.</p></div>
   {% if results.storage_warning %}<div class="score-card"><p class="score-desc"><strong>Save notice:</strong> {{ results.storage_warning }}</p></div>{% endif %}
-  <div class="report-actions"><form method="POST" action="{{ url_for('download_report') }}"><input type="hidden" name="report_token" value="{{ results.pdf_report_token }}"><button type="submit" class="download-btn">Download PDF Summary</button></form>{% if results.assessment_id %}<a href="{{ url_for('assessment_detail', assessment_id=results.assessment_id) }}" class="back-btn">View Saved Assessment</a>{% endif %}</div>
+  <div class="report-actions"><a href="{{ url_for('index', resume=1) }}" class="back-btn">&#x2190; Back to Review &amp; Edit</a><form method="POST" action="{{ url_for('download_report') }}"><input type="hidden" name="report_token" value="{{ results.pdf_report_token }}"><button type="submit" class="download-btn">Download PDF Summary</button></form>{% if results.assessment_id %}<a href="{{ url_for('assessment_detail', assessment_id=results.assessment_id) }}" class="back-btn">View Saved Assessment</a>{% endif %}</div>
 </div>
 </body>
 </html>
